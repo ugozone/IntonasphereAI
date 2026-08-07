@@ -1,6 +1,25 @@
 import os
 import pandas as pd
 import streamlit as st
+from pathlib import Path
+
+BASE_DATA_DIR = Path(os.getenv("INTONASPHERE_DATA_DIR", "."))
+
+UPLOAD_DIR = BASE_DATA_DIR / "uploads"
+OUTPUT_DIR = BASE_DATA_DIR / "outputs"
+PFC_AUDIO_DIR = BASE_DATA_DIR / "pfc_audio"
+PFC_TEXTGRID_DIR = BASE_DATA_DIR / "pfc_textgrids"
+
+for folder in [
+    UPLOAD_DIR,
+    OUTPUT_DIR,
+    OUTPUT_DIR / "csv",
+    OUTPUT_DIR / "excel",
+    OUTPUT_DIR / "logs",
+    PFC_AUDIO_DIR,
+    PFC_TEXTGRID_DIR,
+]:
+    folder.mkdir(parents=True, exist_ok=True)
 import matplotlib.pyplot as plt
 from jiwer import wer
 
@@ -112,7 +131,7 @@ if "current_file_name" not in st.session_state:
 # ============================================================
 
 st.set_page_config(
-    page_title="JamiSpeak Transcriber + Praat Analyzer",
+    page_title="IntonaSphere AI",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -2464,27 +2483,27 @@ st.caption(
 with st.expander("Configure PFC batch extraction", expanded=False):
     pfc_template_path = st.text_input(
         "Token workbook",
-        value="/Users/jamikeuokoroji/jamispeak-transcriber/PFC_speaker_token_template dissertation.xlsx",
+        value=str(BASE_DATA_DIR / "PFC_speaker_token_template dissertation.xlsx"),
     )
 
     pfc_audio_dir = st.text_input(
         "Audio folder",
-        value="/Users/jamikeuokoroji/jamispeak-transcriber/pfc_audio",
+        value=str(PFC_AUDIO_DIR),
     )
 
     pfc_textgrid_dir = st.text_input(
         "TextGrid folder",
-        value="/Users/jamikeuokoroji/jamispeak-transcriber/pfc_textgrids",
+        value=str(PFC_TEXTGRID_DIR),
     )
 
     pfc_output_xlsx = st.text_input(
         "Output Excel file",
-        value="/Users/jamikeuokoroji/jamispeak-transcriber/outputs/excel/PFC_clean_Q1_Q2_Q3_acoustics.xlsx",
+        value=str(OUTPUT_DIR / "excel" / "PFC_clean_Q1_Q2_Q3_acoustics.xlsx"),
     )
 
     pfc_output_csv = st.text_input(
         "Output CSV file",
-        value="/Users/jamikeuokoroji/jamispeak-transcriber/outputs/csv/PFC_clean_Q1_Q2_Q3_acoustics.csv",
+        value=str(OUTPUT_DIR / "csv" / "PFC_clean_Q1_Q2_Q3_acoustics.csv"),
     )
 
     pfc_tier_choices = st.multiselect(
