@@ -1,0 +1,823 @@
+/* ============================================================
+   IntonaSphere AI
+   Responsive Streamlit CSS
+   ============================================================ */
+
+:root {
+    --navy: #0f172a;
+    --blue: #1e3a5f;
+    --gold: #b8860b;
+    --brown: #8b5e34;
+    --cream: #f7efe5;
+    --slate: #475569;
+    --soft-slate: #64748b;
+    --border: rgba(148, 163, 184, 0.28);
+    --card-bg: rgba(255, 255, 255, 0.88);
+    --shadow: 0 14px 36px rgba(15, 23, 42, 0.08);
+}
+
+/* Main app background */
+.stApp {
+    background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 45%, #f7efe5 100%);
+    color: #1f2937;
+    font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+}
+
+/* Main Streamlit container */
+.block-container {
+    padding-top: 1.2rem;
+    padding-bottom: 3rem;
+    max-width: 1280px;
+}
+
+/* Hide Streamlit default menu/footer */
+#MainMenu {
+    visibility: hidden;
+}
+
+footer {
+    visibility: hidden;
+}
+
+/* ============================================================
+   Responsive Navbar
+   ============================================================ */
+
+.global-navbar {
+    width: 100%;
+    min-height: 72px;
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    padding: 0.85rem 1rem;
+    margin: 0 0 1.4rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0.75rem;
+    z-index: 999;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    min-width: 0;
+}
+
+.nav-logo-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, var(--blue), var(--brown));
+    color: #ffffff;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    letter-spacing: -0.04em;
+    box-shadow: 0 10px 26px rgba(30, 58, 95, 0.26);
+    flex: 0 0 auto;
+}
+
+.nav-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+}
+
+.nav-brand-name {
+    color: var(--navy);
+    font-weight: 900;
+    font-size: 1.08rem;
+    letter-spacing: -0.03em;
+}
+
+.nav-brand-subtitle {
+    color: var(--soft-slate);
+    font-size: 0.76rem;
+    margin-top: 0.18rem;
+}
+
+.nav-links {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.nav-links a {
+    color: var(--slate);
+    text-decoration: none;
+    font-size: 0.92rem;
+    font-weight: 750;
+    padding: 0.62rem 0.85rem;
+    border-radius: 999px;
+    transition: all 0.2s ease;
+}
+
+.nav-links a:hover {
+    background: rgba(30, 58, 95, 0.08);
+    color: var(--blue);
+}
+
+.nav-toggle {
+    display: none;
+}
+
+.nav-hamburger {
+    display: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: #ffffff;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 5px;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.nav-hamburger span {
+    width: 20px;
+    height: 2px;
+    background: var(--navy);
+    border-radius: 999px;
+    transition: all 0.2s ease;
+}
+
+/* ============================================================
+   Hero
+   ============================================================ */
+
+.global-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 52%, #8b5e34 100%);
+    color: #ffffff;
+    padding: 3.2rem 3rem;
+    border-radius: 30px;
+    margin-bottom: 2rem;
+    box-shadow: 0 24px 70px rgba(15, 23, 42, 0.23);
+    position: relative;
+    overflow: hidden;
+}
+
+.global-hero::after {
+    content: "";
+    position: absolute;
+    width: 420px;
+    height: 420px;
+    right: -160px;
+    top: -160px;
+    background: rgba(255, 255, 255, 0.11);
+    border-radius: 50%;
+}
+
+.hero-badge {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    padding: 0.45rem 0.85rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+}
+
+.hero-title {
+    font-size: clamp(2rem, 4vw, 4.1rem);
+    line-height: 1.05;
+    font-weight: 900;
+    max-width: 930px;
+    margin: 0 0 1rem 0;
+    letter-spacing: -0.055em;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+    line-height: 1.7;
+    max-width: 860px;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 1.5rem;
+}
+
+.hero-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    margin-top: 1.5rem;
+}
+
+.hero-tag {
+    background: rgba(255, 255, 255, 0.13);
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: 999px;
+    padding: 0.55rem 0.9rem;
+    color: #ffffff;
+    font-size: 0.9rem;
+}
+
+/* ============================================================
+   Cards / Sections
+   ============================================================ */
+
+.global-section-title {
+    font-size: 1.55rem;
+    font-weight: 900;
+    color: var(--navy);
+    margin-top: 2rem;
+    margin-bottom: 0.75rem;
+    letter-spacing: -0.035em;
+}
+
+.global-section-subtitle {
+    color: var(--slate);
+    font-size: 1rem;
+    line-height: 1.65;
+    max-width: 950px;
+    margin-bottom: 1.2rem;
+}
+
+.global-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 1.35rem;
+    box-shadow: var(--shadow);
+    min-height: 190px;
+    height: 100%;
+    margin-bottom: 1rem;
+}
+
+.global-card h3 {
+    color: var(--navy);
+    font-size: 1.08rem;
+    margin: 0 0 0.6rem 0;
+    font-weight: 900;
+    letter-spacing: -0.025em;
+}
+
+.global-card p {
+    color: var(--slate);
+    line-height: 1.62;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+.mobile-trust-pills {
+    margin-top: 1.2rem;
+    margin-bottom: 2rem;
+}
+
+/* ============================================================
+   Workflow
+   ============================================================ */
+
+.workflow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 1rem 0 1.8rem 0;
+}
+
+.workflow-step {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 1rem;
+    border: 1px solid var(--border);
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.workflow-number {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: var(--blue);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    margin-bottom: 0.65rem;
+}
+
+.workflow-step h4 {
+    margin: 0 0 0.35rem 0;
+    font-size: 0.95rem;
+    color: var(--navy);
+    font-weight: 900;
+}
+
+.workflow-step p {
+    margin: 0;
+    color: var(--soft-slate);
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+/* ============================================================
+   Trust banner
+   ============================================================ */
+
+.trust-banner {
+    background: var(--navy);
+    color: #ffffff;
+    border-radius: 26px;
+    padding: 1.55rem;
+    margin: 1.5rem 0 2rem 0;
+    display: grid;
+    grid-template-columns: 1.25fr 1fr;
+    gap: 1rem;
+    align-items: center;
+    box-shadow: 0 16px 42px rgba(15, 23, 42, 0.16);
+}
+
+.trust-banner h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+}
+
+.trust-banner p {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.6;
+}
+
+.trust-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.trust-pill {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    padding: 0.5rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    color: #ffffff;
+}
+
+/* Pills outside dark banner */
+.mobile-trust-pills .trust-pill {
+    background: #ffffff;
+    border: 1px solid rgba(30, 58, 95, 0.14);
+    color: var(--blue);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.05);
+}
+
+/* ============================================================
+   Streamlit controls
+   ============================================================ */
+
+.stButton > button {
+    border-radius: 999px;
+    border: 0;
+    background: linear-gradient(135deg, var(--blue), var(--brown));
+    color: white;
+    padding: 0.65rem 1.2rem;
+    font-weight: 800;
+    box-shadow: 0 10px 25px rgba(30, 58, 95, 0.22);
+}
+
+.stButton > button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px rgba(30, 58, 95, 0.28);
+}
+
+.stDownloadButton > button {
+    border-radius: 999px;
+    background: #ffffff;
+    border: 1px solid rgba(30, 58, 95, 0.25);
+    color: var(--blue);
+    font-weight: 800;
+}
+
+.stDownloadButton > button:hover {
+    background: #f8fafc;
+    border-color: var(--brown);
+    color: var(--brown);
+}
+
+[data-testid="stMetric"] {
+    background: rgba(255, 255, 255, 0.88);
+    border: 1px solid rgba(148, 163, 184, 0.26);
+    border-radius: 18px;
+    padding: 1rem;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.05);
+}
+
+[data-testid="stDataFrame"] {
+    border-radius: 18px;
+    overflow: hidden;
+}
+
+/* Sidebar */
+[data-testid="stSidebar"] {
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border-right: 1px solid rgba(148, 163, 184, 0.25);
+}
+
+/* Make file uploader more mobile friendly */
+[data-testid="stFileUploader"] {
+    width: 100%;
+}
+
+/* Footer */
+.global-footer {
+    margin-top: 3rem;
+    padding: 1.2rem;
+    border-top: 1px solid rgba(148, 163, 184, 0.35);
+    color: var(--soft-slate);
+    font-size: 0.9rem;
+    text-align: center;
+}
+
+/* ============================================================
+   Responsive breakpoints
+   ============================================================ */
+
+/* Tablets and smaller laptops */
+@media (max-width: 1100px) {
+    .workflow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .trust-banner {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Tablets */
+@media (max-width: 900px) {
+    .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        padding-top: 0.75rem;
+    }
+
+    .global-navbar {
+        border-radius: 20px;
+        min-height: 66px;
+        padding: 0.75rem;
+    }
+
+    .nav-hamburger {
+        display: flex;
+    }
+
+    .nav-links {
+        position: absolute;
+        top: calc(100% + 0.65rem);
+        left: 0;
+        right: 0;
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.35rem;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+        padding: 0.85rem;
+        z-index: 1000;
+    }
+
+    .nav-links a {
+        width: 100%;
+        padding: 0.85rem 1rem;
+        border-radius: 16px;
+        background: rgba(248, 250, 252, 0.85);
+    }
+
+    .nav-toggle:checked ~ .nav-links {
+        display: flex;
+    }
+
+    .nav-toggle:checked + .nav-hamburger span:nth-child(1) {
+        transform: translateY(7px) rotate(45deg);
+    }
+
+    .nav-toggle:checked + .nav-hamburger span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .nav-toggle:checked + .nav-hamburger span:nth-child(3) {
+        transform: translateY(-7px) rotate(-45deg);
+    }
+
+    .global-hero {
+        padding: 2.3rem 1.45rem;
+        border-radius: 24px;
+    }
+
+    .hero-title {
+        font-size: clamp(2rem, 8vw, 3rem);
+    }
+
+    .hero-subtitle {
+        font-size: 1rem;
+    }
+
+    .workflow {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Mobile phones */
+@media (max-width: 640px) {
+    .block-container {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+        padding-top: 0.5rem;
+    }
+
+    .global-navbar {
+        top: 0.4rem;
+        margin-bottom: 1rem;
+        border-radius: 18px;
+    }
+
+    /* Mobile view uses only the logo/brand to the left */
+    .nav-brand-subtitle {
+        display: none;
+    }
+
+    .nav-brand-name {
+        font-size: 1rem;
+    }
+
+    .nav-logo-mark {
+        width: 42px;
+        height: 42px;
+        border-radius: 14px;
+    }
+
+    .nav-links {
+        top: calc(100% + 0.5rem);
+    }
+
+    .global-hero {
+        padding: 1.8rem 1.1rem;
+        border-radius: 22px;
+        margin-bottom: 1.3rem;
+    }
+
+    .hero-badge {
+        font-size: 0.7rem;
+        padding: 0.38rem 0.65rem;
+    }
+
+    .hero-title {
+        font-size: 2rem;
+        line-height: 1.08;
+        letter-spacing: -0.045em;
+    }
+
+    .hero-subtitle {
+        font-size: 0.94rem;
+        line-height: 1.58;
+    }
+
+    .hero-tags {
+        gap: 0.45rem;
+    }
+
+    .hero-tag {
+        font-size: 0.78rem;
+        padding: 0.45rem 0.65rem;
+    }
+
+    .global-section-title {
+        font-size: 1.25rem;
+        line-height: 1.25;
+    }
+
+    .global-section-subtitle {
+        font-size: 0.92rem;
+        line-height: 1.55;
+    }
+
+    .global-card {
+        min-height: auto;
+        padding: 1.05rem;
+        border-radius: 20px;
+    }
+
+    .global-card h3 {
+        font-size: 1rem;
+    }
+
+    .global-card p {
+        font-size: 0.9rem;
+    }
+
+    .trust-banner {
+        padding: 1.15rem;
+        border-radius: 22px;
+    }
+
+    .trust-banner h3 {
+        font-size: 1.08rem;
+    }
+
+    .trust-banner p {
+        font-size: 0.9rem;
+    }
+
+    .trust-pill {
+        font-size: 0.76rem;
+        padding: 0.42rem 0.58rem;
+    }
+
+    /* Streamlit columns often get cramped on mobile; force readable layout */
+    [data-testid="column"] {
+        min-width: 100% !important;
+        width: 100% !important;
+        flex: 1 1 100% !important;
+    }
+
+    /* Better tables on mobile */
+    [data-testid="stDataFrame"] {
+        overflow-x: auto;
+    }
+
+    /* Buttons full width on mobile */
+    .stButton > button,
+    .stDownloadButton > button {
+        width: 100%;
+        margin-bottom: 0.35rem;
+    }
+
+    textarea,
+    input,
+    select {
+        font-size: 16px !important;
+    }
+}
+
+/* Very small phones */
+@media (max-width: 420px) {
+    .nav-brand-name {
+        font-size: 0.94rem;
+    }
+
+    .nav-logo-mark {
+        width: 38px;
+        height: 38px;
+        font-size: 0.9rem;
+    }
+
+    .nav-hamburger {
+        width: 40px;
+        height: 40px;
+    }
+
+    .hero-title {
+        font-size: 1.75rem;
+    }
+
+    .hero-subtitle {
+        font-size: 0.88rem;
+    }
+
+    .global-hero {
+        padding: 1.45rem 0.95rem;
+    }
+}
+
+/* ============================================================
+   Native Streamlit Navbar Fix
+   Prevents logo/nav from blocking app buttons
+   ============================================================ */
+
+.native-navbar-shell {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid rgba(148, 163, 184, 0.28);
+    border-radius: 22px;
+    box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 1.2rem;
+    position: relative;
+    z-index: 1;
+}
+
+.native-brand-text {
+    line-height: 1.1;
+}
+
+.native-brand-name {
+    color: #0f172a;
+    font-weight: 900;
+    font-size: 1.12rem;
+    letter-spacing: -0.03em;
+}
+
+.native-brand-subtitle {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-top: 0.2rem;
+}
+
+.nav-logo-fallback {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #1e3a5f, #8b5e34);
+    color: #ffffff;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Make hamburger button neat */
+button[kind="secondary"] {
+    border-radius: 999px !important;
+}
+
+/* Mobile: keep only logo on the left and hamburger on the right */
+@media (max-width: 640px) {
+    .native-brand-text {
+        display: none;
+    }
+
+    .native-navbar-shell {
+        padding: 0.55rem 0.65rem;
+        border-radius: 18px;
+        margin-bottom: 0.9rem;
+    }
+}
+
+/* ============================================================
+   Restore Streamlit Sidebar Controls
+   ============================================================ */
+
+[data-testid="stSidebar"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    z-index: 999 !important;
+}
+
+[data-testid="stSidebarContent"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Keep the custom navbar from covering controls */
+.native-navbar-shell {
+    position: relative !important;
+    z-index: 1 !important;
+    pointer-events: auto !important;
+}
+
+
+/* ============================================================
+   Professional Sidebar Multiselect Styling
+   Replaces default red selected tags with JamiSpeak navy/gold
+   ============================================================ */
+
+/* Multiselect selected tags */
+[data-baseweb="tag"] {
+    background: linear-gradient(135deg, #1e3a5f, #8b5e34) !important;
+    color: #ffffff !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    font-weight: 700 !important;
+}
+
+/* Text inside selected tags */
+[data-baseweb="tag"] span {
+    color: #ffffff !important;
+}
+
+/* Remove/close icon inside selected tags */
+[data-baseweb="tag"] svg {
+    color: #ffffff !important;
+    fill: #ffffff !important;
+}
+
+/* Multiselect input border when focused */
+[data-baseweb="select"] > div {
+    border-color: rgba(30, 58, 95, 0.35) !important;
+    box-shadow: none !important;
+}
+
+/* Dropdown option hover */
+[data-baseweb="menu"] li:hover {
+    background-color: rgba(30, 58, 95, 0.08) !important;
+}
+
+/* Selected radio button color */
+[data-testid="stSidebar"] input[type="radio"]:checked {
+    accent-color: #1e3a5f !important;
+}

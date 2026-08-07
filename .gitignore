@@ -1,0 +1,39 @@
+# Mac system files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Local environments
+venv/
+.env
+.env.*
+
+# Runtime folders
+uploads/
+outputs/
+temp/
+
+# Research corpus/data files - keep private and do not upload to GitHub
+pfc_audio/
+pfc_textgrids/
+data/
+*.wav
+*.mp3
+*.TextGrid
+*.textgrid
+*.xlsx
+*.csv
+
+# Backup and old code files
+*.backup*
+*.bak
+*.old
+*backup*
+*before*
+*old code*
+*.txt
+
+# Streamlit secrets
+.streamlit/secrets.toml
