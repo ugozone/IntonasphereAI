@@ -37,3 +37,4 @@ data/
 !requirements.txt
 # Streamlit secrets
 .streamlit/secrets.toml
+!packages.txt
