@@ -24,3 +24,8 @@ This app transcribes audio/video files and performs phonetic/acoustic analysis u
 cd ~/jamispeak-transcriber
 conda activate jamispeak-transcriber
 python -m pip install -r requirements.txt
+
+## Run
+#cd /Users/jamikeuokoroji/jamispeak-transcriber
+conda activate jamispeak-transcriber
+python -m streamlit run app.py#
