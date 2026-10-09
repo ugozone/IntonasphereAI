@@ -1,4 +1,4 @@
-# JamiSpeak Transcriber + Praat Analyzer
+#IntonasphereAI Transcriber + Praat Analyzer
 
 This app transcribes audio/video files and performs phonetic/acoustic analysis using Praat through Parselmouth.
 
