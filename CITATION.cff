@@ -25,7 +25,7 @@ authors:
   - given-names: "Jamike Ugochukwu"
     family-names: "Okoroji"
     # orcid: "https://orcid.org/0000-0000-0000-0000"
-    # affiliation: "Your Department, Your University"
+    affiliation: "Department of Modern Languages and Classics, Barefield College of Arts and Sciences, The University of Alabama"
 repository-code: "https://github.com/ugozone/IntonasphereAI"
 url: "https://intonasphereai.org/"
 version: "0.1.0"
