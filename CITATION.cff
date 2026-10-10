@@ -1,0 +1,77 @@
+# This CITATION.cff file was generated for IntonaSphere AI.
+# GitHub reads it and shows a "Cite this repository" button on the repo page.
+# Validate after edits with:  pip install cffconvert && cffconvert --validate
+#
+# TODO before your first tagged release:
+#   1. Add your ORCID (uncomment the orcid line below).
+#   2. Add your affiliation (uncomment the affiliation line below).
+#   3. Add a LICENSE file to the repo, then uncomment the license line.
+#   4. After archiving a release on Zenodo, uncomment the doi line and paste the DOI.
+
+cff-version: 1.2.0
+message: "If you use IntonaSphere AI in your research, please cite it using the metadata below."
+type: software
+title: "IntonaSphere AI: A Transcription and Praat-Based Prosody Analysis Toolkit"
+abstract: >-
+  IntonaSphere AI is an open-source Streamlit application and Python toolkit that
+  combines automatic speech transcription (faster-whisper), multilingual phonetic
+  transcription (phonemizer/eSpeak-NG, Epitran), and Praat-based acoustic analysis
+  (via Parselmouth) for research on intonation and prosody. It supports
+  audio/TextGrid pair processing, token-level extraction of F0, semitone-normalized
+  pitch measures, final slope, intensity, duration, plateau duration and rule-based
+  final-contour classification, batch extraction for PFC-style corpora, transcription
+  accuracy testing (WER), and export to CSV, Excel, DOCX, PDF and SRT.
+authors:
+  - given-names: "Jamike Ugochukwu"
+    family-names: "Okoroji"
+    # orcid: "https://orcid.org/0000-0000-0000-0000"
+    # affiliation: "Your Department, Your University"
+repository-code: "https://github.com/ugozone/IntonasphereAI"
+url: "https://intonasphereai.org/"
+version: "0.1.0"
+date-released: "2026-10-09"
+# license: MIT
+# doi: "10.5281/zenodo.XXXXXXX"
+keywords:
+  - prosody
+  - intonation
+  - phonetics
+  - Praat
+  - Parselmouth
+  - TextGrid
+  - F0
+  - speech transcription
+  - Whisper
+  - French
+  - PFC corpus
+  - interrogatives
+  - Streamlit
+references:
+  - type: software
+    title: "Praat: doing phonetics by computer"
+    authors:
+      - given-names: "Paul"
+        family-names: "Boersma"
+      - given-names: "David"
+        family-names: "Weenink"
+    url: "https://www.praat.org"
+  - type: article
+    title: "Introducing Parselmouth: A Python interface to Praat"
+    authors:
+      - given-names: "Yannick"
+        family-names: "Jadoul"
+      - given-names: "Bill"
+        family-names: "Thompson"
+      - given-names: "Bart"
+        family-names: "de Boer"
+    journal: "Journal of Phonetics"
+    volume: 71
+    start: 1
+    end: 15
+    year: 2018
+    doi: "10.1016/j.wocn.2018.07.001"
+  - type: software
+    title: "faster-whisper"
+    authors:
+      - name: "SYSTRAN"
+    repository-code: "https://github.com/SYSTRAN/faster-whisper"
