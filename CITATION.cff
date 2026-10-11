@@ -5,7 +5,6 @@
 # TODO before your first tagged release:
 #   1. Add your ORCID (uncomment the orcid line below).
 #   2. Add your affiliation (uncomment the affiliation line below).
-#   3. Add a LICENSE file to the repo, then uncomment the license line.
 #   4. After archiving a release on Zenodo, uncomment the doi line and paste the DOI.
 
 cff-version: 1.2.0
@@ -20,7 +19,10 @@ abstract: >-
   audio/TextGrid pair processing, token-level extraction of F0, semitone-normalized
   pitch measures, final slope, intensity, duration, plateau duration and rule-based
   final-contour classification, batch extraction for PFC-style corpora, transcription
-  accuracy testing (WER), and export to CSV, Excel, DOCX, PDF and SRT.
+  accuracy testing (WER), and export to CSV, Excel, DOCX, PDF and SRT. Version 0.2.0 adds
+  a command-line research pipeline: automatic WebMAUS alignment, final-syllable acoustic
+  cues with five contour classes, F_ToBI proposal TextGrids, a 28-column dataset with its
+  codebook, run comparison, and Praat scripts that re-measure the values.
 authors:
   - given-names: "Jamike Ugochukwu"
     family-names: "Okoroji"
@@ -28,9 +30,9 @@ authors:
     affiliation: "Department of Modern Languages and Classics, Barefield College of Arts and Sciences, The University of Alabama"
 repository-code: "https://github.com/ugozone/IntonasphereAI"
 url: "https://intonasphereai.org/"
-version: "0.1.0"
-date-released: "2026-10-09"
-# license: MIT
+version: "0.2.0"
+date-released: "2026-10-10"
+license: MIT
 # doi: "10.5281/zenodo.XXXXXXX"
 keywords:
   - prosody
@@ -45,6 +47,9 @@ keywords:
   - French
   - PFC corpus
   - interrogatives
+  - F_ToBI
+  - WebMAUS
+  - forced alignment
   - Streamlit
 references:
   - type: software
@@ -70,6 +75,21 @@ references:
     end: 15
     year: 2018
     doi: "10.1016/j.wocn.2018.07.001"
+  - type: article
+    title: "Multilingual processing of speech via web services"
+    authors:
+      - given-names: "Thomas"
+        family-names: "Kisler"
+      - given-names: "Uwe"
+        family-names: "Reichel"
+      - given-names: "Florian"
+        family-names: "Schiel"
+    journal: "Computer Speech & Language"
+    volume: 45
+    start: 326
+    end: 347
+    year: 2017
+    doi: "10.1016/j.csl.2017.01.005"
   - type: software
     title: "faster-whisper"
     authors:
