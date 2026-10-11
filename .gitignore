@@ -38,3 +38,7 @@ data/
 # Streamlit secrets
 .streamlit/secrets.toml
 !packages.txt
+
+# Pipeline run outputs (created on your computer, not part of the code)
+pipeline/outputs_selftest/
+pipeline/outputs/

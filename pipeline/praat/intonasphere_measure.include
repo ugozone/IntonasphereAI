@@ -1,0 +1,109 @@
+# intonasphere_measure.include  -  shared by verify_final_domain.praat and draw_final_domain.praat
+# Measures the final-syllable cues of a selected Pitch object between .t1 and .t2,
+# with the definitions IntonaSphere uses (see verify_final_domain.praat).
+#
+#   @fdMeasure: pitch, t1, t2
+#   -> fdMeasure.nv (voiced frames), .onset, .onsetTime, .peak, .peakTime, .offset, .offsetTime,
+#      .slope (ST/s, least squares), .intercept (ST re 100 Hz at time 0), .change (ST)
+
+procedure fdMeasure: .pitch, .t1, .t2
+    selectObject: .pitch
+    .nfr = Get number of frames
+    .nv = 0
+    for .f to .nfr
+        .t = Get time from frame number: .f
+        if .t >= .t1 and .t <= .t2
+            .v = Get value in frame: .f, "Hertz"
+            if .v <> undefined
+                .nv = .nv + 1
+                .tv [.nv] = .t
+                .fv [.nv] = .v
+            endif
+        endif
+    endfor
+    .onset = undefined
+    .offset = undefined
+    .peak = undefined
+    .slope = undefined
+    .intercept = undefined
+    .change = undefined
+    .onsetTime = undefined
+    .offsetTime = undefined
+    .peakTime = undefined
+    if .nv >= 3
+        .onset = .fv [1] + .fv [2] + .fv [3] - max (.fv [1], .fv [2], .fv [3]) - min (.fv [1], .fv [2], .fv [3])
+        .a = .fv [.nv - 2]
+        .b = .fv [.nv - 1]
+        .c = .fv [.nv]
+        .offset = .a + .b + .c - max (.a, .b, .c) - min (.a, .b, .c)
+        .onsetTime = (.tv [1] + .tv [2] + .tv [3]) / 3
+        .offsetTime = (.tv [.nv - 2] + .tv [.nv - 1] + .tv [.nv]) / 3
+        .peak = .fv [1]
+        .peakTime = .tv [1]
+        for .k from 2 to .nv
+            if .fv [.k] > .peak
+                .peak = .fv [.k]
+                .peakTime = .tv [.k]
+            endif
+        endfor
+        .sx = 0
+        .sy = 0
+        for .k to .nv
+            .st [.k] = 12 * log2 (.fv [.k] / 100)
+            .sx = .sx + .tv [.k]
+            .sy = .sy + .st [.k]
+        endfor
+        .mx = .sx / .nv
+        .my = .sy / .nv
+        .sxy = 0
+        .sxx = 0
+        for .k to .nv
+            .sxy = .sxy + (.tv [.k] - .mx) * (.st [.k] - .my)
+            .sxx = .sxx + (.tv [.k] - .mx) ^ 2
+        endfor
+        .slope = .sxy / .sxx
+        .intercept = .my - .slope * .mx
+        .change = 12 * log2 (.offset / .onset)
+    endif
+endproc
+
+procedure fdClass: .slope, .threshold
+    # Same rule as IntonaSphere: rise-fall / fall-rise when F0 turns inside the syllable (peak or
+    # low in the middle 60% of the voiced span, >= 1.5 ST beyond both onset and offset, >= 4 voiced
+    # frames on each side), otherwise
+    # rise / fall / plateau from the fitted slope. Uses the frames stored by @fdMeasure.
+    .class$ = "undefined"
+    if .slope <> undefined
+        if .slope >= .threshold
+            .class$ = "rise"
+        elsif .slope <= - .threshold
+            .class$ = "fall"
+        else
+            .class$ = "plateau"
+        endif
+    endif
+    if fdMeasure.nv >= 5
+        .on = 12 * log2 (fdMeasure.onset / 100)
+        .off = 12 * log2 (fdMeasure.offset / 100)
+        .imax = 1
+        .imin = 1
+        for .k from 2 to fdMeasure.nv
+            if fdMeasure.st [.k] > fdMeasure.st [.imax]
+                .imax = .k
+            endif
+            if fdMeasure.st [.k] < fdMeasure.st [.imin]
+                .imin = .k
+            endif
+        endfor
+        .span = fdMeasure.tv [fdMeasure.nv] - fdMeasure.tv [1]
+        if .span > 0
+            .pp = (fdMeasure.tv [.imax] - fdMeasure.tv [1]) / .span
+            .pv = (fdMeasure.tv [.imin] - fdMeasure.tv [1]) / .span
+            if .pp >= 0.2 and .pp <= 0.8 and .imax >= 4 and fdMeasure.nv - .imax >= 3 and fdMeasure.st [.imax] - .on >= 1.5 and fdMeasure.st [.imax] - .off >= 1.5
+                .class$ = "rise-fall"
+            elsif .pv >= 0.2 and .pv <= 0.8 and .imin >= 4 and fdMeasure.nv - .imin >= 3 and .on - fdMeasure.st [.imin] >= 1.5 and .off - fdMeasure.st [.imin] >= 1.5
+                .class$ = "fall-rise"
+            endif
+        endif
+    endif
+endproc
