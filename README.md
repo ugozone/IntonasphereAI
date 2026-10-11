@@ -24,8 +24,10 @@ This app transcribes audio/video files and performs phonetic/acoustic analysis u
 
 ## Setup
 
+Open Terminal in the `IntonasphereAI` folder (on a Mac, e.g. `/Users/yourname/IntonasphereAI`, which is the same as `~/IntonasphereAI`), or `cd` to wherever you cloned the repository:
+
 ```bash
-cd ~/IntonasphereAI
+cd ~/IntonasphereAI          # or: cd /path/to/IntonasphereAI
 conda activate jamispeak-transcriber
 python -m pip install -r requirements.txt
 ```
@@ -42,7 +44,7 @@ python -m streamlit run app.py
 The [`pipeline/`](pipeline/) folder holds the command-line research pipeline used for the LSA 2027 study: WAV → alignment (your TextGrids, or WebMAUS from the sound and its text) → final-syllable acoustic cues and contour class → F_ToBI proposal TextGrids → the 28-column dataset with its codebook, plus Praat scripts that re-measure the values and draw both graphs.
 
 ```bash
-cd ~/IntonasphereAI/pipeline
+cd ~/IntonasphereAI/pipeline   # or: cd /path/to/IntonasphereAI/pipeline
 python3 -m pip install -r requirements.txt
 python3 -m modules.selftest --folder test_data
 python3 -m modules.run_all --folder ~/Desktop/pfc_all --out ~/Desktop/pfc_results --align pfc --speakers metadata/pfc_speaker_table_corrected.xlsx
