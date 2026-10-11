@@ -54,14 +54,14 @@ See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `c
 
 If you use IntonaSphere AI in your research, please cite the software. GitHub's **"Cite this repository"** button (right-hand sidebar) gives APA and BibTeX generated from [`CITATION.cff`](CITATION.cff); BibTeX for the tool and its core dependencies is also in [`CITATION.bib`](CITATION.bib).
 
-> Okoroji, J. U. (2026). *IntonaSphere AI: A transcription and Praat-based prosody analysis toolkit* (Version 0.1.0) [Computer software]. https://github.com/ugozone/IntonasphereAI
+> Okoroji, J. U. (2026). *IntonaSphere AI: A transcription and Praat-based prosody analysis toolkit* (Version 0.2.0) [Computer software]. https://github.com/ugozone/IntonasphereAI
 
 ```bibtex
 @software{Okoroji_IntonaSphere_AI_2026,
   author  = {Okoroji, Jamike Ugochukwu},
   title   = {{IntonaSphere AI: A Transcription and Praat-Based Prosody Analysis Toolkit}},
   year    = {2026},
-  version = {0.1.0},
+  version = {0.2.0},
   url     = {https://github.com/ugozone/IntonasphereAI},
   note    = {Project website: https://intonasphereai.org/}
 }
@@ -73,3 +73,10 @@ IntonaSphere AI's acoustic measures are computed with Praat through Parselmouth,
 - Jadoul, Y., Thompson, B., & de Boer, B. (2018). Introducing Parselmouth: A Python interface to Praat. *Journal of Phonetics, 71*, 1–15. https://doi.org/10.1016/j.wocn.2018.07.001
 
 If you use the transcription module, cite Whisper (Radford et al., 2023); the entry is in `CITATION.bib`.
+
+If you use the pipeline's automatic alignment, please also cite WebMAUS: Kisler, T., Reichel, U., & Schiel, F. (2017). Multilingual processing of speech via web services. *Computer Speech & Language, 45*, 326–347. https://doi.org/10.1016/j.csl.2017.01.005
+
+## License
+
+IntonaSphere AI is released under the [MIT License](LICENSE). © 2026 Jamike Ugochukwu Okoroji. You may use, modify and share the code, provided the copyright notice and licence text are kept. Corpus recordings and metadata (e.g. PFC) are not part of this repository and remain under their own terms.
+
