@@ -35,6 +35,21 @@ conda activate jamispeak-transcriber
 python -m streamlit run app.py
 ```
 
+## Analysis pipeline (batch extraction, F_ToBI, dataset)
+
+The [`pipeline/`](pipeline/) folder holds the command-line research pipeline used for the LSA 2027 study: WAV → alignment (your TextGrids, or WebMAUS from the sound and its text) → final-syllable acoustic cues and contour class → F_ToBI proposal TextGrids → the 28-column dataset with its codebook, plus Praat scripts that re-measure the values and draw both graphs.
+
+```bash
+cd ~/IntonasphereAI/pipeline
+python3 -m pip install -r requirements.txt
+python3 -m modules.selftest --folder test_data
+python3 -m modules.run_all --folder ~/Desktop/pfc_all --out ~/Desktop/pfc_results --align pfc --speakers metadata/pfc_speaker_table_corrected.xlsx
+```
+
+No recordings or corpus metadata are included: the self-test makes its own synthetic recordings, and the speaker table stays on your computer (see [`pipeline/metadata/README.md`](pipeline/metadata/README.md)).
+
+See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `compare_runs`, `check_folder`), [`pipeline/PRAAT_VERIFICATION.md`](pipeline/PRAAT_VERIFICATION.md) for checking the values in Praat, and [`pipeline/VERSION.md`](pipeline/VERSION.md) for what this version includes.
+
 ## How to cite
 
 If you use IntonaSphere AI in your research, please cite the software. GitHub's **"Cite this repository"** button (right-hand sidebar) gives APA and BibTeX generated from [`CITATION.cff`](CITATION.cff); BibTeX for the tool and its core dependencies is also in [`CITATION.bib`](CITATION.bib).

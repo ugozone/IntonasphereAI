@@ -1,0 +1,9 @@
+numpy
+scipy
+pandas
+matplotlib
+openpyxl
+praat-parselmouth
+requests
+# optional, only for non-PFC recordings without a .txt:
+# faster-whisper
