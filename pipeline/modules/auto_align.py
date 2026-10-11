@@ -42,6 +42,8 @@ Command line (alignment only):
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import re
 import shutil
@@ -342,7 +344,7 @@ def ensure_alignments(folder: Path, align_dir: Path, mode: str = "any", language
                    "ALIGNMENT_SOURCE": r.alignment_source, "STATUS": r.status, "MESSAGE": r.message,
                    "TEXT": r.text, "USER_TEXTGRID": str(r.user_textgrid) if r.user_textgrid else ""}
                   for r in results]).to_csv(
-        _log_dir(align_dir) / "alignment_log.csv", index=False)
+        _log_dir(align_dir) / "alignment_log.csv", index=False, encoding=CSV_ENCODING)
     return results
 
 
@@ -355,8 +357,8 @@ def main():
     ap.add_argument("--asr-model", default="small")
     ap.add_argument("--realign", action="store_true", help="align every WAV with WebMAUS, ignoring existing TextGrids")
     a = ap.parse_args()
-    out = Path(a.out) if a.out else Path(a.folder) / "aligned"
-    res = ensure_alignments(Path(a.folder), out, a.align, a.language, a.asr_model, realign=a.realign)
+    out = user_path(a.out) if a.out else user_path(a.folder) / "aligned"
+    res = ensure_alignments(user_path(a.folder), out, a.align, a.language, a.asr_model, realign=a.realign)
     for r in res:
         print(f"{r.wav.name:28s} {r.status:8s} {r.alignment_source or '':38s} {r.text_source:14s} {r.message}")
 

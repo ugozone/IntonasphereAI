@@ -19,6 +19,8 @@ a speaker exactly at the median goes to the group set by `age_tie`, default "Old
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import difflib
 import re
 import unicodedata
@@ -113,7 +115,13 @@ def load_speakers(path: Path, age_tie: str = "Older", fixes: Optional[Dict[str, 
         if df is None:
             raise ValueError(f"no sheet with a speaker-code and an Age column in {path.name}")
     else:
-        df, sheet = pd.read_csv(path), ""
+        df = None
+        for enc in (CSV_ENCODING, "cp1252", "latin-1"):     # Excel on Windows saves CSV as cp1252
+            try:
+                df = pd.read_csv(path, encoding=enc); break
+            except UnicodeDecodeError:
+                continue
+        sheet = ""
     c_code = _find_col(df, "Speaker code", "speaker_code", "speaker", "code", "speaker_id")
     df = df[df[c_code].notna() & (df[c_code].astype(str).str.strip() != "")].reset_index(drop=True)
     c = {k: _find_col(df, *v) for k, v in {

@@ -32,6 +32,8 @@ conda activate jamispeak-transcriber
 python -m pip install -r requirements.txt
 ```
 
+**Windows:** the same commands work in the Anaconda Prompt, from your `C:\Users\yourname\IntonasphereAI` folder. The Streamlit app also needs FFmpeg (`conda install -c conda-forge ffmpeg`). The analysis pipeline (below) uses `python` instead of `python3`; see [Windows in pipeline/README.md](pipeline/README.md#windows).
+
 ## Run
 
 ```bash
