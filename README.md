@@ -1,5 +1,7 @@
 # IntonaSphere AI Transcriber + Praat Analyzer
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23290623.svg)](https://doi.org/10.5281/zenodo.23290623) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 Website: https://intonasphereai.org/
 
 This app transcribes audio/video files and performs phonetic/acoustic analysis using Praat through Parselmouth.
@@ -54,7 +56,7 @@ See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `c
 
 If you use IntonaSphere AI in your research, please cite the software. GitHub's **"Cite this repository"** button (right-hand sidebar) gives APA and BibTeX generated from [`CITATION.cff`](CITATION.cff); BibTeX for the tool and its core dependencies is also in [`CITATION.bib`](CITATION.bib).
 
-> Okoroji, J. U. (2026). *IntonaSphere AI: A transcription and Praat-based prosody analysis toolkit* (Version 0.2.0) [Computer software]. https://github.com/ugozone/IntonasphereAI
+> Okoroji, J. U. (2026). *IntonaSphere AI: A transcription and Praat-based prosody analysis toolkit* (Version 0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23290623
 
 ```bibtex
 @software{Okoroji_IntonaSphere_AI_2026,
@@ -62,6 +64,7 @@ If you use IntonaSphere AI in your research, please cite the software. GitHub's 
   title   = {{IntonaSphere AI: A Transcription and Praat-Based Prosody Analysis Toolkit}},
   year    = {2026},
   version = {0.2.0},
+  doi     = {10.5281/zenodo.23290623},
   url     = {https://github.com/ugozone/IntonasphereAI},
   note    = {Project website: https://intonasphereai.org/}
 }
