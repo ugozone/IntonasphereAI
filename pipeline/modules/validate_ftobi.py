@@ -27,6 +27,8 @@ tiers are point or interval tiers (e.g. one annotated before this tool existed):
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import re
 from pathlib import Path
@@ -274,7 +276,7 @@ def main():
         df = boundary_agreement(read_textgrid(a.boundaries_only[0]), read_textgrid(a.boundaries_only[1]), a.tol)
         print(df.to_string(index=False))
         return
-    run(Path(a.auto), Path(a.checked), Path(a.out), a.tol)
+    run(user_path(a.auto), user_path(a.checked), user_path(a.out), a.tol)
 
 
 if __name__ == "__main__":

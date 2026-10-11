@@ -17,6 +17,8 @@ Output: compare_runs.xlsx and compare_runs_report.txt in folder B (or --out).
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 from pathlib import Path
 
@@ -32,7 +34,7 @@ def load(folder: Path) -> pd.DataFrame:
         return pd.read_excel(x, sheet_name="ALL_TOKENS")
     c = folder / "intonasphere_results.csv"
     if c.exists():
-        return pd.read_csv(c)
+        return pd.read_csv(c, encoding=CSV_ENCODING)
     raise SystemExit(f"No intonasphere_results.xlsx/.csv in {folder}")
 
 
@@ -48,7 +50,7 @@ def main():
     ap.add_argument("--only-user-textgrids", action="store_true",
                     help="compare only recordings for which run A used your own TextGrid")
     a = ap.parse_args()
-    A, B = load(Path(a.a).expanduser()), load(Path(a.b).expanduser())
+    A, B = load(user_path(a.a)), load(user_path(a.b))
     if a.only_user_textgrids and "ALIGNMENT_SOURCE" in A:
         A = A[A.ALIGNMENT_SOURCE == "user_textgrid"]
     m = A.merge(B, on="AUDIO_FILE", suffixes=("_A", "_B"))
@@ -58,7 +60,7 @@ def main():
         # which would agree with itself and inflate the agreement; compare aligned files only
         al = lambda c: m[c].fillna("").astype(str).str.strip().str.lower().isin(["", "none", "nan"])
         m = m[~al("ALIGNMENT_SOURCE_A") & ~al("ALIGNMENT_SOURCE_B")].reset_index(drop=True)
-    out = Path(a.out).expanduser() if a.out else Path(a.b).expanduser()
+    out = user_path(a.out) if a.out else user_path(a.b)
     L = [f"IntonaSphere: comparison of two runs",
          f"A = {a.label_a}: {a.a}", f"B = {a.label_b}: {a.b}",
          f"Recordings in both runs: {n_all}; compared (aligned in both runs): {len(m)}"

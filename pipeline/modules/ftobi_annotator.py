@@ -87,6 +87,8 @@ agreement with modules/validate_ftobi.py.
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import re
 import unicodedata
@@ -895,8 +897,8 @@ def write_tables(rows: List[Dict], syl_frames: List[pd.DataFrame], cfg: FToBICon
     df = df[[c for c in first if c in df.columns] + [c for c in df.columns if c not in first]]
     sdf = pd.concat(syl_frames, ignore_index=True) if syl_frames else pd.DataFrame()
     out.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out / "ftobi_tokens.csv", index=False)
-    sdf.to_csv(out / "ftobi_syllables.csv", index=False)
+    df.to_csv(out / "ftobi_tokens.csv", index=False, encoding=CSV_ENCODING)
+    sdf.to_csv(out / "ftobi_syllables.csv", index=False, encoding=CSV_ENCODING)
     # small, comma-free table that praat/check_ftobi.praat reads (pitch range + proposal per file)
     if "NUCLEAR" in df.columns:
         df.loc[df.STATUS == "completed", ["AUDIO_FILE", "PITCH_FLOOR_HZ", "PITCH_CEILING_HZ", "NUCLEAR"]] \
@@ -958,8 +960,8 @@ def main():
         ap.add_argument(f"--{k.replace('_', '-')}", type=float, default=v)
     a = ap.parse_args()
     cfg = FToBIConfig(**{k: getattr(a, k) for k in asdict(FToBIConfig())})
-    run_folder(a.folder, a.out, cfg, tuple(a.pitch_range) if a.pitch_range else None,
-               align=a.align, align_dir=a.align_dir, language=a.language, asr_model=a.asr_model)
+    run_folder(user_path(a.folder), user_path(a.out), cfg, tuple(a.pitch_range) if a.pitch_range else None,
+               align=a.align, align_dir=user_path(a.align_dir), language=a.language, asr_model=a.asr_model)
 
 
 if __name__ == "__main__":

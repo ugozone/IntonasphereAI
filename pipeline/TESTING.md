@@ -7,6 +7,8 @@ pip install -r requirements.txt
 pip install faster-whisper        # only to test recordings that have no TextGrid and no .txt
 ```
 
+On **Windows**, type `python` where these pages say `python3`; see the Windows section in README.md.
+
 ## 2. Automatic self-test (about 5 minutes)
 The repository ships no recordings (corpus audio stays private). When `test_data/` has no WAV files, the self-test first creates two short **synthetic** recordings with `test_data/make_test_data.py` (a buzz shaped like the vowel /a/, saying "la banane"; no real speaker):
 

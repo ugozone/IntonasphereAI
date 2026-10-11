@@ -34,6 +34,8 @@ Optional (recommended): praat-parselmouth  -> Praat's own pitch & intensity.
 
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import math
 import re
@@ -1034,7 +1036,7 @@ def run_folder(folder: str | Path, out: str | Path, **kw) -> pd.DataFrame:
              "CUES_TEXTGRID", "FIGURE_FILE"]
     df = df[[c for c in first if c in df.columns] + [c for c in df.columns if c not in first]]
     out.mkdir(parents=True, exist_ok=True)
-    df.to_csv(out / "final_domain_cues.csv", index=False)
+    df.to_csv(out / "final_domain_cues.csv", index=False, encoding=CSV_ENCODING)
     write_praat_check(df, out)
     with pd.ExcelWriter(out / "final_domain_cues.xlsx", engine="openpyxl") as xw:
         df.to_excel(xw, sheet_name="FINAL_DOMAIN_CUES", index=False)
@@ -1053,7 +1055,7 @@ def main():
                     help="Fixed pitch range in Hz instead of the speaker-adaptive two-pass range")
     ap.add_argument("--svg", action="store_true", help="Also save each figure as SVG")
     a = ap.parse_args()
-    run_folder(a.folder, a.out, tier=a.tier, force_auto=a.force_auto, slope_threshold=a.slope_threshold,
+    run_folder(user_path(a.folder), user_path(a.out), tier=a.tier, force_auto=a.force_auto, slope_threshold=a.slope_threshold,
                fixed_range=tuple(a.pitch_range) if a.pitch_range else None, svg=a.svg)
 
 

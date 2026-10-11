@@ -16,6 +16,8 @@ Writes folder_check.xlsx and folder_check_report.txt in the folder's parent (or 
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import re
 from pathlib import Path
@@ -163,6 +165,23 @@ def plan_fixes(folder: Path, df: pd.DataFrame, tgs: List[Path], wavs: List[Path]
     return out
 
 
+def _same_file(a: Path, b: Path) -> bool:
+    """True when a and b are the same file under two spellings (case-insensitive disks)."""
+    try:
+        return a.exists() and b.exists() and a.samefile(b)
+    except OSError:
+        return False
+
+
+def _rename(src: Path, dst: Path) -> None:
+    """Rename that also works for a case-only change (x.textgrid -> x.TextGrid) on Windows/macOS."""
+    if _same_file(src, dst) and src.name != dst.name:
+        tmp = src.with_name(src.name + ".renaming_tmp")
+        src.rename(tmp); tmp.rename(dst)
+    else:
+        src.rename(dst)
+
+
 def apply_fixes(folder: Path, acts: List[Dict], log_path: Path) -> int:
     done = []
     (folder / ASIDE).mkdir(exist_ok=True)
@@ -170,25 +189,25 @@ def apply_fixes(folder: Path, acts: List[Dict], log_path: Path) -> int:
         src, dst = folder / a_["FROM"], folder / a_["TO"]
         if not src.exists():
             a_["RESULT"] = "skipped: file not found"; continue
-        if dst.exists():
+        if dst.exists() and not _same_file(src, dst):
             a_["RESULT"] = "skipped: target already exists"; continue
-        src.rename(dst)
+        _rename(src, dst)
         a_["RESULT"] = "done"; done.append(a_)
-    old = pd.read_csv(log_path) if log_path.exists() else pd.DataFrame()
-    pd.concat([old, pd.DataFrame(acts)], ignore_index=True).to_csv(log_path, index=False)
+    old = pd.read_csv(log_path, encoding=CSV_ENCODING) if log_path.exists() else pd.DataFrame()
+    pd.concat([old, pd.DataFrame(acts)], ignore_index=True).to_csv(log_path, index=False, encoding=CSV_ENCODING)
     return len(done)
 
 
 def undo_fixes(folder: Path, log_path: Path) -> int:
     if not log_path.exists():
         print("No fix log found: nothing to undo."); return 0
-    log = pd.read_csv(log_path)
+    log = pd.read_csv(log_path, encoding=CSV_ENCODING)
     n = 0
     for _, a_ in log[log.RESULT == "done"].iloc[::-1].iterrows():
         src, dst = folder / a_["TO"], folder / a_["FROM"]
-        if src.exists() and not dst.exists():
-            src.rename(dst); n += 1
-    log_path.rename(log_path.with_suffix(".undone.csv"))
+        if src.exists() and (not dst.exists() or _same_file(src, dst)):
+            _rename(src, dst); n += 1
+    log_path.replace(log_path.with_suffix(".undone.csv"))      # replace(): also works on Windows if it exists
     print(f"Undid {n} change(s).")
     return n
 
@@ -207,11 +226,11 @@ def main():
     ap.add_argument("--undo", action="store_true", help="reverse the fixes recorded in folder_fix_log.csv")
     a = ap.parse_args()
     if a.undo:
-        f_ = Path(a.folder).expanduser()
+        f_ = user_path(a.folder)
         undo_fixes(f_, f_ / "folder_fix_log.csv")
         return
-    folder = Path(a.folder).expanduser()
-    out = Path(a.out).expanduser() if a.out else folder.parent
+    folder = user_path(a.folder)
+    out = user_path(a.out) if a.out else folder.parent
     files = [p for p in folder.iterdir() if not p.name.startswith(".")]
     wavs = sorted(p for p in files if p.suffix.lower() == ".wav")
     tgs = sorted(p for p in files if p.suffix.lower() == ".textgrid")
@@ -258,7 +277,7 @@ def main():
     table = None
     if a.speakers:
         from .dataset_sheet import load_speakers
-        table, sp_info = load_speakers(Path(a.speakers).expanduser(), "Older",
+        table, sp_info = load_speakers(user_path(a.speakers), "Older",
                                        dict(f.split("=", 1) for f in a.speaker_fix))
     import difflib
     for c in sorted(set(codes) | (set(table.index) if table is not None else set())):

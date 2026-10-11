@@ -37,6 +37,8 @@ modules.auto_align) keep working exactly as before.
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import time
 from dataclasses import asdict
@@ -71,6 +73,24 @@ README_ROWS = [
 ]
 
 
+def _check_outputs_writable(*dirs: Path) -> None:
+    """Stop at once (not after a long run) if a results file is open in Excel: Windows locks open files."""
+    locked = []
+    for d in dirs:
+        if not d.exists():
+            continue
+        for f in list(d.glob("*.xlsx")) + list(d.glob("*.csv")):
+            try:
+                with open(f, "a"):
+                    pass
+            except PermissionError:
+                locked.append(f.name)
+    if locked:
+        raise SystemExit("These result files are open in another program (e.g. Excel) and cannot be "
+                         "overwritten:\n  " + "\n  ".join(locked) + "\nClose them, or choose another --out folder, "
+                         "then run the command again.")
+
+
 def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, ftobi: bool = True,
         cfg: Optional[FToBIConfig] = None, slope_threshold: float = 1.5, tier: str = "MAS",
         fixed_range: Optional[Tuple[float, float]] = None, language: str = "fra-FR",
@@ -81,6 +101,7 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     cfg = cfg or FToBIConfig()
     folder, out = Path(folder), Path(out)
     fd_dir, ft_dir, al_dir = out / "final_domain", out / "ftobi", out / "aligned"
+    _check_outputs_writable(out, fd_dir, ft_dir)
     t0 = time.time()
     print(f"IntonaSphere AI  |  folder: {folder}  |  alignment: {align}  |  "
           f"final-domain: {'on' if final_domain else 'off'}  |  F_ToBI: {'on' if ftobi else 'off'}  |  "
@@ -185,7 +206,7 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     if final_domain and fd_rows:
         fd = pd.DataFrame(fd_rows)
         fd_dir.mkdir(parents=True, exist_ok=True)
-        fd.to_csv(fd_dir / "final_domain_cues.csv", index=False)
+        fd.to_csv(fd_dir / "final_domain_cues.csv", index=False, encoding=CSV_ENCODING)
         write_praat_check(fd, fd_dir)
         with pd.ExcelWriter(fd_dir / "final_domain_cues.xlsx", engine="openpyxl") as xw:
             fd.to_excel(xw, sheet_name="FINAL_DOMAIN_CUES", index=False)
@@ -234,12 +255,12 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
               {"STEP": "final domain", "PARAMETER": "slope threshold (ST/s)", "VALUE": slope_threshold}]
     params += [{"STEP": "F_ToBI", "PARAMETER": k, "VALUE": v} for k, v in asdict(cfg).items()]
     out.mkdir(parents=True, exist_ok=True)
-    all_df.to_csv(out / "intonasphere_results.csv", index=False)
+    all_df.to_csv(out / "intonasphere_results.csv", index=False, encoding=CSV_ENCODING)
     al_log = pd.DataFrame([{"AUDIO_FILE": a.wav.name, "TEXTGRID": str(a.textgrid) if a.textgrid else "",
                             "TEXT_SOURCE": a.text_source, "ALIGNMENT_SOURCE": a.alignment_source,
                             "STATUS": a.status, "MESSAGE": a.message, "TEXT": a.text} for a in aligned])
     ds = pd.DataFrame(ds_rows, columns=DATASET_COLUMNS)
-    ds.to_csv(out / "intonasphere_dataset.csv", index=False)
+    ds.to_csv(out / "intonasphere_dataset.csv", index=False, encoding=CSV_ENCODING)
     if sp_info:
         params += [{"STEP": "dataset", "PARAMETER": "speaker table", "VALUE": f"{sp_info['file']} [{sp_info['sheet']}]"},
                    {"STEP": "dataset", "PARAMETER": "median age (all speakers in table)", "VALUE": sp_info["median_age"]},
@@ -306,9 +327,9 @@ def main():
     ap.add_argument("--speaker-fix", action="append", default=[], metavar="TABLE_CODE=CORRECT_CODE",
                     help="correct a speaker code in the table, e.g. --speaker-fix 81acc1=81aac1 (repeatable)")
     a = ap.parse_args()
-    run(Path(a.folder), Path(a.out), a.align, not a.no_final_domain, not a.no_ftobi, FToBIConfig(),
+    run(user_path(a.folder), user_path(a.out), a.align, not a.no_final_domain, not a.no_ftobi, FToBIConfig(),
         a.slope_threshold, a.tier, tuple(a.pitch_range) if a.pitch_range else None, a.language,
-        a.asr_model, a.svg, a.speakers, a.age_tie,
+        a.asr_model, a.svg, user_path(a.speakers), a.age_tie,
         dict(f.split("=", 1) for f in a.speaker_fix), a.speakers_sheet, a.pitch_method,
         not a.no_sex_first_pass, a.realign)
 

@@ -25,6 +25,8 @@ Nothing in the input folder is changed, except x.asr.txt files written by speech
 """
 from __future__ import annotations
 
+from . import user_path, CSV_ENCODING
+
 import argparse
 import importlib
 import platform
@@ -164,7 +166,7 @@ def main():
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="any")
     ap.add_argument("--skip-network", action="store_true", help="do not contact WebMAUS")
     a = ap.parse_args()
-    folder, out = Path(a.folder), Path(a.out)
+    folder, out = user_path(a.folder), user_path(a.out)
     if not any(p.suffix.lower() == ".wav" for p in folder.glob("*")) and (folder / "make_test_data.py").exists():
         import runpy
         runpy.run_path(str(folder / "make_test_data.py"), run_name="__main__")
@@ -200,6 +202,7 @@ def main():
     print(summary)
     (out / "selftest_report.txt").write_text("\n".join(LINES) + "\n" + summary + "\n", encoding="utf-8")
     print(f"Report: {out / 'selftest_report.txt'}   Outputs to inspect: {out / 'run'}")
+    sys.exit(1 if fails else 0)
 
 
 if __name__ == "__main__":

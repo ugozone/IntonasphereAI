@@ -117,6 +117,31 @@ python -m modules.run_all --folder data/wavs --out outputs --speakers metadata/p
 | `python -m modules.auto_align --folder X --out X` | WebMAUS TextGrids only, saved next to the WAVs |
 | `python -m modules.validate_ftobi --auto Y --checked Y` | Agreement between the F_ToBI proposals and the corrections made in Praat |
 
+## Windows
+
+The pipeline runs on Windows 10/11 as well as macOS and Linux. It is tested on all three automatically (see the *Actions* tab on GitHub). The only differences are in how you type the commands:
+
+| | macOS / Linux | Windows (PowerShell or Command Prompt) |
+|---|---|---|
+| Python command | `python3` | `python` (or `py`) |
+| Install | `python3 -m pip install -r requirements.txt` | `python -m pip install -r requirements.txt` |
+| Paths | `~/Desktop/pfc_all` | `~/Desktop/pfc_all` also works, or `C:\Users\yourname\Desktop\pfc_all` |
+| Paths with spaces | `"~/My data/pfc_all"` | `"C:\Users\yourname\My data\pfc_all"` (always use quotes) |
+| Several lines | end a line with `\` | PowerShell: end with `` ` `` (backtick); Command Prompt: put everything on one line |
+
+Example (PowerShell, one line):
+
+```
+cd C:\Users\yourname\IntonasphereAI\pipeline
+python -m modules.run_all --folder "~/Desktop/pfc_all" --out "~/Desktop/pfc_results" --align pfc --speakers metadata/pfc_speaker_table_corrected.xlsx
+```
+
+Notes:
+- **Installing Python:** install it from python.org or Anaconda. With the python.org installer, tick **"Add python.exe to PATH"**.
+- **Files open in Excel:** close `intonasphere_results.xlsx` (and the CSVs) before running again. Windows locks open files, and the pipeline stops at the start and names them, so a long run is never lost at the end.
+- **CSV files:** they are saved as UTF-8 with a byte-order mark, so Excel on Windows shows accents and IPA symbols correctly.
+- **Praat scripts:** they work the same in Praat for Windows. In the script forms you can paste folder paths with either `\` or `/`.
+
 ## Checking the results in Praat
 
 - **F_ToBI:** run `praat/check_ftobi.praat` on `outputs/ftobi`, correct each file and save it as `*_checked.TextGrid`. Then run `validate_ftobi`.
