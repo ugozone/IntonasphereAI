@@ -1783,6 +1783,7 @@ def process_media(
         docx_path = save_transcript_docx(
             transcript,
             filename=f"{speaker_id}_transcript.docx",
+            segments=segments,
         )
 
         pdf_path = save_transcript_pdf(
