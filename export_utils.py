@@ -100,6 +100,12 @@ def timestamped_filename(prefix: str, speaker_id: str, ext: str) -> str:
 # ============================================================
 # Basic transcript exports
 # ============================================================
+def save_transcript_txt(transcript: str, filename: str = "transcript.txt") -> str:
+    path = os.path.join(OUTPUT_DIR, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(transcript or "")
+    return path
+
 
 def save_transcript_docx(transcript: str, filename: str = "transcript.docx", segments: list = None) -> str:
     path = os.path.join(OUTPUT_DIR, filename)
