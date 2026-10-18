@@ -97,7 +97,7 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
         asr_model: str = "small", svg: bool = False, speakers_file: Optional[Path] = None,
         age_tie: str = "Older", speaker_fixes: Optional[Dict[str, str]] = None,
         speakers_sheet: Optional[str] = None, pitch_method: str = "speaker",
-        first_pass_by_sex: bool = True, realign: bool = False) -> pd.DataFrame:
+        first_pass_by_sex: bool = True, realign: bool = False, measure_domain: str = "final") -> pd.DataFrame:
     cfg = cfg or FToBIConfig()
     folder, out = Path(folder), Path(out)
     fd_dir, ft_dir, al_dir = out / "final_domain", out / "ftobi", out / "aligned"
@@ -162,7 +162,8 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
         if final_domain:
             try:
                 r = process_token(w, tg, fd_dir, tier=tier, slope_threshold=slope_threshold,
-                                  fixed_range=fixed_range, svg=svg, pitch=pitch)
+                                  fixed_range=fixed_range, svg=svg, pitch=pitch,
+                                  measure_domain=measure_domain)
                 r.update(base)
             except Exception as e:
                 r = {**base, "STATUS": "failed", "ERROR": str(e)}
@@ -252,7 +253,9 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
               {"STEP": "pitch", "PARAMETER": "first pass", "VALUE": "by sex: men 60-300 Hz, women 100-500 Hz, "
                "unknown 60-600 Hz" if first_pass_by_sex and speakers is not None else "60-600 Hz for everyone"},
               {"STEP": "final domain", "PARAMETER": "syllable tier", "VALUE": tier},
-              {"STEP": "final domain", "PARAMETER": "slope threshold (ST/s)", "VALUE": slope_threshold}]
+              {"STEP": "final domain", "PARAMETER": "slope threshold (ST/s)", "VALUE": slope_threshold},
+              {"STEP": "final domain", "PARAMETER": "measure domain", "VALUE":
+               "final syllable + whole phrase (PHRASE_* columns)" if measure_domain == "both" else "final syllable only"}]
     params += [{"STEP": "F_ToBI", "PARAMETER": k, "VALUE": v} for k, v in asdict(cfg).items()]
     out.mkdir(parents=True, exist_ok=True)
     all_df.to_csv(out / "intonasphere_results.csv", index=False, encoding=CSV_ENCODING)
@@ -326,12 +329,15 @@ def main():
                     help="group of a speaker whose age equals the median (default Older)")
     ap.add_argument("--speaker-fix", action="append", default=[], metavar="TABLE_CODE=CORRECT_CODE",
                     help="correct a speaker code in the table, e.g. --speaker-fix 81acc1=81aac1 (repeatable)")
+    ap.add_argument("--measure", choices=["final", "both"], default="final",
+                    help="final = final-syllable cues only (default); both = also measure the whole phrase "
+                         "(PHRASE_F0_ONSET/MAX/MIN/OFFSET_HZ, PHRASE_F0_RANGE_ST, PHRASE_F0_CHANGE_ST, PHRASE_SLOPE_ST)")
     a = ap.parse_args()
     run(user_path(a.folder), user_path(a.out), a.align, not a.no_final_domain, not a.no_ftobi, FToBIConfig(),
         a.slope_threshold, a.tier, tuple(a.pitch_range) if a.pitch_range else None, a.language,
         a.asr_model, a.svg, user_path(a.speakers), a.age_tie,
         dict(f.split("=", 1) for f in a.speaker_fix), a.speakers_sheet, a.pitch_method,
-        not a.no_sex_first_pass, a.realign)
+        not a.no_sex_first_pass, a.realign, a.measure)
 
 
 if __name__ == "__main__":

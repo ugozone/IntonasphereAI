@@ -561,6 +561,52 @@ def measure_cues(t_f0, f0, t_int, db, syl: Interval, ref_hz: float, slope_thresh
     return res
 
 
+MEASURE_DOMAINS = ("final", "both")   # "final": final syllable only; "both": final syllable + whole phrase
+
+
+def phrase_span(tg_in: Optional["TextGrid"], sounding, syl: Interval) -> Tuple[float, float, str]:
+    """Whole-phrase span: from the first word (TextGrid word tier) or the first sounding stretch,
+    to the end of the final syllable."""
+    if tg_in is not None:
+        for name in WORD_TIERS:
+            t = tg_in.get(name)
+            if t is not None and t.kind == "interval":
+                words = [iv for iv in t.intervals if (iv.label or "").strip() and not _is_pause(iv.label)]
+                if words and words[0].start < syl.end:
+                    return float(words[0].start), float(syl.end), f"word tier {name}"
+    if sounding:
+        return float(sounding[0][0]), float(syl.end), "first sounding stretch (silence detection)"
+    return 0.0, float(syl.end), "file start"
+
+
+def measure_phrase(t_f0, f0, start: float, end: float, ref_hz: float) -> Dict:
+    """Same measures as measure_cues, over the whole phrase instead of the final syllable.
+    Onset / offset = median of the first / last 3 voiced frames, as in measure_cues."""
+    m = (t_f0 >= start) & (t_f0 <= end) & ~np.isnan(f0)
+    res: Dict = {"PHRASE_START": start, "PHRASE_END": end, "PHRASE_DURATION": end - start,
+                 "PHRASE_VOICED_FRAMES": int(m.sum())}
+    if m.sum() < 3:
+        return res
+    tt, ff = t_f0[m], f0[m]
+    s = st(ff, ref_hz)
+    i_mx, i_mn = int(np.argmax(ff)), int(np.argmin(ff))
+    k = min(3, len(ff))
+    on_hz, off_hz = float(np.median(ff[:k])), float(np.median(ff[-k:]))
+    b1, _ = np.polyfit(tt, s, 1)
+    res.update(
+        PHRASE_F0_ONSET_TIME=float(np.mean(tt[:k])), PHRASE_F0_ONSET_HZ=on_hz,
+        PHRASE_F0_OFFSET_TIME=float(np.mean(tt[-k:])), PHRASE_F0_OFFSET_HZ=off_hz,
+        PHRASE_F0_MAX_TIME=float(tt[i_mx]), PHRASE_F0_MAX_HZ=float(ff[i_mx]),
+        PHRASE_F0_MIN_TIME=float(tt[i_mn]), PHRASE_F0_MIN_HZ=float(ff[i_mn]),
+        PHRASE_F0_MEAN_HZ=float(np.mean(ff)),
+        PHRASE_F0_RANGE_ST=float(s.max() - s.min()),
+        PHRASE_F0_CHANGE_ST=float(12 * np.log2(off_hz / on_hz)),
+        PHRASE_SLOPE_ST=float(b1),               # overall trend in ST/s (declination if negative)
+        PHRASE_MAX_POSITION_PROP=float((tt[i_mx] - start) / max(end - start, 1e-9)),
+    )
+    return res
+
+
 def cue_points(c: Dict) -> List[Point]:
     """One point per measured value, with a short label (the summary goes on the CONTOUR tier)."""
     if c.get("STATUS") != "completed":
@@ -877,9 +923,13 @@ def draw_figure(token_id, x, sr, t_f0, f0, rng, tiers: List[Tier], syl: Interval
 # ---------------------------------------------------------------------------
 def process_token(wav: Path, textgrid: Optional[Path], out_dir: Path, tier="MAS", force_auto=False,
                   slope_threshold=1.5, fixed_range: Optional[Tuple[float, float]] = None,
-                  svg=False, pitch=None) -> Dict:
+                  svg=False, pitch=None, measure_domain: str = "final") -> Dict:
     """pitch: optional precomputed (times, f0, (floor, ceiling)) so that a combined run
-    tracks F0 once per file; identical to what adaptive_pitch would return."""
+    tracks F0 once per file; identical to what adaptive_pitch would return.
+    measure_domain: "final" = final-syllable cues only (default, unchanged behaviour);
+    "both" = also measure the whole phrase (PHRASE_* columns)."""
+    if measure_domain not in MEASURE_DOMAINS:
+        raise ValueError(f"measure_domain must be one of {MEASURE_DOMAINS}, not {measure_domain!r}")
     stem = re.sub(r"\s+copy$", "", wav.stem, flags=re.I)
     m = re.match(r"^(.+?)tw([1-4])$", stem, flags=re.I)      # PFC names only (xxxtw1/2/3 questions, tw4 statement)
     qnum = m.group(2) if m else ""
@@ -936,6 +986,11 @@ def process_token(wav: Path, textgrid: Optional[Path], out_dir: Path, tier="MAS"
     cues = measure_cues(t_f0, f0, t_int, db, syl, ref, slope_threshold)
     cues.update(final_vowel_coverage(tg_in if src_tier != "SYL-AUTO" else None, syl, t_f0, f0))
     row.update(cues)
+    row["MEASURE_DOMAIN"] = measure_domain
+    if measure_domain == "both":
+        p_start, p_end, p_src = phrase_span(tg_in, sounding, syl)
+        row.update(measure_phrase(t_f0, f0, p_start, p_end, ref))
+        row["PHRASE_SPAN_SOURCE"] = p_src
 
     # Build the output TextGrid: original tiers (or automatic ones) + FINAL-DOMAIN + CUES
     tg_out = TextGrid(0.0, dur)
@@ -1054,9 +1109,11 @@ def main():
     ap.add_argument("--pitch-range", nargs=2, type=float, metavar=("FLOOR", "CEILING"),
                     help="Fixed pitch range in Hz instead of the speaker-adaptive two-pass range")
     ap.add_argument("--svg", action="store_true", help="Also save each figure as SVG")
+    ap.add_argument("--measure", choices=MEASURE_DOMAINS, default="final",
+                    help="final = final-syllable cues only (default); both = also onset/max/min/offset/range over the whole phrase")
     a = ap.parse_args()
     run_folder(user_path(a.folder), user_path(a.out), tier=a.tier, force_auto=a.force_auto, slope_threshold=a.slope_threshold,
-               fixed_range=tuple(a.pitch_range) if a.pitch_range else None, svg=a.svg)
+               fixed_range=tuple(a.pitch_range) if a.pitch_range else None, svg=a.svg, measure_domain=a.measure)
 
 
 if __name__ == "__main__":
