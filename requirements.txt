@@ -1,5 +1,6 @@
 streamlit
 faster-whisper
+av<19
 yt-dlp
 jiwer
 python-docx
