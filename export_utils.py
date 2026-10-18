@@ -101,21 +101,19 @@ def timestamped_filename(prefix: str, speaker_id: str, ext: str) -> str:
 # Basic transcript exports
 # ============================================================
 
-def save_transcript_txt(transcript: str, filename: str = "transcript.txt") -> str:
-    path = os.path.join(OUTPUT_DIR, filename)
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(transcript or "")
-    return path
-
-
-def save_transcript_docx(transcript: str, filename: str = "transcript.docx") -> str:
+def save_transcript_docx(transcript: str, filename: str = "transcript.docx", segments: list = None) -> str:
     path = os.path.join(OUTPUT_DIR, filename)
 
     doc = Document()
     doc.add_heading("Transcript", level=1)
     doc.add_paragraph(transcript or "")
-    doc.save(path)
 
+    if segments:
+        doc.add_heading("Transcription with timestamp", level=2)
+        for seg in segments:
+            doc.add_paragraph(f"[{seg['start']:.2f}s - {seg['end']:.2f}s] {seg['text']}")
+
+    doc.save(path)
     return path
 
 
