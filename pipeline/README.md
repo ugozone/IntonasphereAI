@@ -56,6 +56,7 @@ For every WAV in the folder, the command runs these steps in one pass:
 | `--align pfc` | Call WebMAUS only for PFC file names and files that have a `.txt` |
 | `--no-ftobi` / `--no-final-domain` | Produce only one of the two graphs |
 | `--pitch-range 75 500` | Use a fixed pitch range instead of the speaker-adaptive one |
+| `--measure both` | Also measure the whole phrase, not just the final syllable: `PHRASE_F0_ONSET_HZ`, `PHRASE_F0_MAX_HZ`, `PHRASE_F0_MIN_HZ`, `PHRASE_F0_OFFSET_HZ`, `PHRASE_F0_MEAN_HZ`, `PHRASE_F0_RANGE_ST`, `PHRASE_F0_CHANGE_ST`, `PHRASE_SLOPE_ST` (in the FINAL_DOMAIN sheet). The phrase runs from the first word (TextGrid word tier) or the first sounding stretch to the end of the final syllable. Default `--measure final` keeps the old output unchanged. |
 | `--realign` | Ignore every existing TextGrid and align **all** files with WebMAUS from the sound and its text (PFC text, or your `.txt`). Your TextGrids are not changed; their names are kept in the `USER_TEXTGRID` column for comparison. Needs `--align pfc` or `--align any`. If WebMAUS fails for a file, that file falls back to automatic segmentation (it does not use your TextGrid), and the ALIGNMENT sheet says why. |
 
 ## Aligning everything from the sound alone (`--realign`) and comparing
