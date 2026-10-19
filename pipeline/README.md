@@ -3,6 +3,45 @@
 **Testing first:** see TESTING.md (`python -m modules.selftest --folder test_data`).
 Checking values and drawing the graphs in Praat: see PRAAT_VERIFICATION.md.
 
+## Cut a long recording into phrase clips
+
+For a film, an interview or a long reading, `segment_media` cuts the recording into one WAV per phrase, each with a `.txt` holding its words. The folder it writes goes straight into `run_all`.
+
+```bash
+python -m modules.segment_media --media ~/Desktop/film.mp4 --srt ~/Desktop/film.srt --out ~/Desktop/film_clips
+python -m modules.run_all --folder ~/Desktop/film_clips --out ~/Desktop/film_results --align any --measure both
+```
+
+| Where the phrase times come from | Option |
+|---|---|
+| Your own list (columns `start`, `end`, `text`, optional `id`, `label`) | `--segments list.csv` |
+| A Praat TextGrid, e.g. a PFC transcription: each labelled interval of one tier becomes a clip | `--textgrid file.TextGrid` (`--tier NAME` to choose the tier) |
+| Subtitles, e.g. the `.srt` IntonaSphere exports | `--srt file.srt` |
+| An IntonaSphere transcript with `[12.34s - 15.67s] text` lines (`.docx` or `.txt`) | `--transcript file.docx` |
+| Plain text with no times: faster-whisper finds each word's time and your sentences are matched to them | `--text file.txt` |
+| Nothing: faster-whisper transcribes and the clips follow its sentences (check the `.txt` files) | *(no option)* |
+
+Audio or video both work (WAV, MP3, M4A, MP4, MOV, ...; anything but WAV needs ffmpeg). The output folder also holds `segments.csv` (times in the original recording, text, clip name, notes to check) and a `<media>.TextGrid` with one interval per phrase, to open in Praat with the original audio. For a video, its audio track is saved as `<media>.wav`.
+
+Options: `--prefix 11aab1_` adds the speaker code to every clip name, so clips from several recordings can share one folder; `--pad 0.15` seconds of context around each phrase; `--match '\?'` keeps only phrases whose text matches (here, questions); `--split segments` keeps the given segments as they are instead of one clip per sentence; `--keep-suspect` keeps phrases flagged as recognition loops.
+
+Many recordings at once (macOS/Linux), each WAV with a same-name TextGrid, all clips in one folder:
+
+```bash
+for w in ~/Desktop/pfc_long/*.wav; do
+  b=$(basename "$w" .wav)
+  python -m modules.segment_media --media "$w" --textgrid "${w%.wav}.TextGrid" --prefix "${b}_" --out ~/Desktop/pfc_clips
+done
+```
+
+Each run rewrites `segments.csv` and adds its own TextGrid, so give each recording its own `--out` folder if you need every `segments.csv`.
+
+Safeguards:
+- **Padding never reaches into a neighbouring phrase.** It stops halfway through the gap, so a clip cannot start with the end of someone else's line.
+- **Recognition loops are left out.** The same text 3+ times in a row, or a long stretch with almost no words (music), is flagged `SUSPECT` in `segments.csv` and not written.
+- **Several sentences in one segment** are split at `.`, `?`, `!` when word times are known (`--text` or speech recognition). From subtitles they stay whole and are flagged, so you can cut them by hand.
+- **Misheard words** at the edge of a sentence (`--text` mode) are kept inside it, up to the neighbouring sentences; a sentence with few matched words is flagged, one with none is listed as `not found`.
+
 ## Check a folder before processing it
 
 ```bash
