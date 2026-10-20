@@ -98,6 +98,37 @@ For every WAV in the folder, the command runs these steps in one pass:
 | `--measure both` | Also measure the whole phrase, not just the final syllable: `PHRASE_F0_ONSET_HZ`, `PHRASE_F0_MAX_HZ`, `PHRASE_F0_MIN_HZ`, `PHRASE_F0_OFFSET_HZ`, `PHRASE_F0_MEAN_HZ`, `PHRASE_F0_RANGE_ST`, `PHRASE_F0_CHANGE_ST`, `PHRASE_SLOPE_ST` (in the FINAL_DOMAIN sheet). The phrase runs from the first word (TextGrid word tier) or the first sounding stretch to the end of the final syllable. Default `--measure final` keeps the old output unchanged. |
 | `--realign` | Ignore every existing TextGrid and align **all** files with WebMAUS from the sound and its text (PFC text, or your `.txt`). Your TextGrids are not changed; their names are kept in the `USER_TEXTGRID` column for comparison. Needs `--align pfc` or `--align any`. If WebMAUS fails for a file, that file falls back to automatic segmentation (it does not use your TextGrid), and the ALIGNMENT sheet says why. |
 
+## Build a coding table for a study
+
+`coding_table` puts the results of one or more `run_all` runs into one table: your study design on the left, the measures on the right, semitone formulas, and every value that needs a look in Praat coloured orange with the reason beside it.
+
+```bash
+# once per study: a design file to fill in (set, pair, phrase, gloss, expected contour...)
+python -m modules.coding_table --results ~/Desktop/Rue_children/results ~/Desktop/Rue_shopkeeper/results --make-design ~/Desktop/rue_design.csv
+
+# after every run
+python -m modules.coding_table \
+    --results Children=~/Desktop/Rue_children/results Shopkeeper=~/Desktop/Rue_shopkeeper/results \
+    --design ~/Desktop/rue_design.csv --corrections ~/Desktop/rue_corrections.csv \
+    --out ~/Desktop/rue_coding_table.xlsx
+```
+
+- `--results` takes results folders or files. `Label=path` names the speaker (or group) of that run; without it the label is the analysed folder's name.
+- `--design` is a CSV whose only required column is `id` (the clip name, `07_wh`, or its number, `07`). Every other column is copied in your order. A `speaker` column wins over the run label.
+- `--corrections` is a CSV with `id, column, value, note`: hand values measured in Praat. `column` is a header of the table (e.g. `F0 onset (Hz)`); an empty `value` blanks the cell. Corrected cells turn blue, and every change is listed in the CORRECTIONS sheet, so the table can be rebuilt identically after a rerun.
+
+For PFC, write the design once per **question** instead of once per recording: `--design-by question` with a design file whose `question` column holds Q1, Q2, Q3, S4 (or 1, 2, ...). Each row fills in every speaker's recording of that question; the question comes from the recording's `SENTENCE_ID` or the end of its name (`…tw_Q3`).
+
+```bash
+python -m modules.coding_table --results ~/Desktop/pfc_results --make-design ~/Desktop/pfc_questions.csv --design-by question
+python -m modules.coding_table --results ~/Desktop/pfc_results --design ~/Desktop/pfc_questions.csv --design-by question \
+    --corrections ~/Desktop/pfc_corrections.csv --out ~/Desktop/pfc_coding_table.xlsx
+```
+
+When the run had a speaker table, the speaker ID, site, country, region group, age, age group, sex, question type and sentence are copied from its DATASET sheet, so the table can be filtered by region or question type directly (`--no-corpus-info` leaves them out). Without a `Label=`, a PFC recording's speaker is its speaker code.
+
+Flagged in orange: an onset (or a max at the onset) 1.8 times the file's median F0 or more (octave doubling); an onset, offset or min 1/1.8 of the median or less (halving or creak); the pipeline's octave-jump flag; an onset or min within 1.5 ST of the pitch floor, a max within 1.5 ST of the ceiling; F0 on less than half of the final vowel; a final syllable under 120 ms; a contour class that disagrees with the F_ToBI boundary tone (fall with H%, rise with L%); words taken from speech recognition. A flag asks you to look; it does not change any value.
+
 ## Aligning everything from the sound alone (`--realign`) and comparing
 
 So that the whole dataset is aligned by one documented procedure, run the extraction twice, into two output folders, then compare them:
