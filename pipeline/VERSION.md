@@ -10,7 +10,16 @@ One package with everything; it replaces all earlier zips.
 | `python3 -m modules.compare_runs --a O1 --b O2` | Compares two runs (e.g. your TextGrids vs. `--realign`): boundary differences in ms, cue differences, contour and nuclear agreement with kappa. |
 | `python3 -m modules.selftest --folder test_data` | Tests the installation on your computer. |
 | `python3 -m modules.validate_ftobi --auto O/ftobi --checked O/ftobi` | Measures agreement between the F_ToBI proposals and an annotator's corrections. |
+| `python3 -m modules.segment_media --media film.mp4 --srt film.srt --out F` | Cuts a long recording (audio or video) into one WAV + .txt per phrase, ready for `run_all`. Times from a CSV, subtitles, a TextGrid, an IntonaSphere transcript, or speech recognition. |
+| `python3 -m modules.run_all ... --measure both` | Also measures the whole phrase (PHRASE_* columns: onset, offset, max, min, mean, range, change, slope), not only the final syllable. |
+| `python3 -m modules.coding_table --results R1 R2 --design d.csv --corrections c.csv --out t.xlsx` | Builds one coding table from one or more runs: study design + measures + semitone formulas, values to check in Praat in orange, hand corrections in blue and logged. `--design-by question` for PFC. |
 | Praat: `praat/verify_final_domain.praat`, `draw_final_domain.praat`, `draw_ftobi.praat`, `check_ftobi.praat` | Re-measure the values in Praat, draw both graphs in Praat, and correct the F_ToBI proposals. |
+
+## Added on 20 October 2026
+
+- **segment_media:** cuts films, interviews and long readings into phrase clips; padding never reaches into a neighbouring phrase, and speech-recognition loops over music are flagged.
+- **Whole-phrase measures:** `run_all --measure both` (default `--measure final` keeps the old output unchanged).
+- **coding_table:** corpus coding table with automatic QC flags (octave doubling at onset, halving or creak, values at the pitch floor or ceiling, low final-vowel F0, short final syllable, contour vs F_ToBI boundary disagreement, speech-recognition text) and a corrections file that doubles as the QC log.
 
 ## Included in this version
 
