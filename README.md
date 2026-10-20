@@ -58,6 +58,8 @@ See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `c
 
 ## How to cite
 
+**Author:** Jamike Ugochukwu Okoroji, Department of Modern Languages and Classics, Barefield College of Arts and Sciences, The University of Alabama, Tuscaloosa, Alabama, USA.
+
 If you use IntonaSphere AI in your research, please cite the software. GitHub's **"Cite this repository"** button (right-hand sidebar) gives APA and BibTeX generated from [`CITATION.cff`](CITATION.cff); BibTeX for the tool and its core dependencies is also in [`CITATION.bib`](CITATION.bib).
 
 > Okoroji, J. U. (2026). *IntonaSphere AI: A transcription and Praat-based prosody analysis toolkit* (Version 0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23290623
@@ -70,7 +72,7 @@ If you use IntonaSphere AI in your research, please cite the software. GitHub's 
   version = {0.2.0},
   doi     = {10.5281/zenodo.23290623},
   url     = {https://github.com/ugozone/IntonasphereAI},
-  note    = {Project website: https://intonasphereai.org/}
+  note    = {Department of Modern Languages and Classics, The University of Alabama, Tuscaloosa, Alabama, USA. Project website: https://intonasphereai.org/}
 }
 ```
 
