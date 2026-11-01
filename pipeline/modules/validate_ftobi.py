@@ -38,6 +38,7 @@ import numpy as np
 import pandas as pd
 
 from .final_domain_visualizer import read_textgrid, TextGrid, Tier
+from .i18n import t as tr, add_lang_option
 
 
 # ---------------------------------------------------------------------------
@@ -197,7 +198,7 @@ def run(auto_dir: Path, checked_dir: Path, out: Path, tol: float) -> Dict[str, p
         if a.exists():
             pairs.append((stem, a, c))
     if not pairs:
-        raise SystemExit("No <stem>_checked.TextGrid with a matching <stem>_ftobi.TextGrid found.")
+        raise SystemExit(tr('No <stem>_checked.TextGrid with a matching <stem>_ftobi.TextGrid found.'))
     br, tones, nucs, bounds = [], [], [], []
     for stem, a, c in pairs:
         A, R = read_textgrid(a), read_textgrid(c)
@@ -213,21 +214,21 @@ def run(auto_dir: Path, checked_dir: Path, out: Path, tol: float) -> Dict[str, p
     summary = []
     if len(bdf):
         a, r = bdf.AUTO.tolist(), bdf.REF.tolist()
-        summary += [("breaks: word junctures compared", len(bdf)),
-                    ("breaks: exact agreement", float(np.mean(bdf.AUTO == bdf.REF))),
-                    ("breaks: Cohen's kappa", kappa(a, r, cats=[0, 1, 2, 3, 4])),
-                    ("breaks: linear-weighted kappa", kappa(a, r, "linear", cats=[0, 1, 2, 3, 4]))]
+        summary += [(tr('breaks: word junctures compared'), len(bdf)),
+                    (tr('breaks: exact agreement'), float(np.mean(bdf.AUTO == bdf.REF))),
+                    (tr("breaks: Cohen's kappa"), kappa(a, r, cats=[0, 1, 2, 3, 4])),
+                    (tr('breaks: linear-weighted kappa'), kappa(a, r, "linear", cats=[0, 1, 2, 3, 4]))]
         for lev, name in ((2, "AP"), (3, "ip"), (4, "IP")):
             tp = int(((bdf.AUTO >= lev) & (bdf.REF >= lev)).sum())
             fp = int(((bdf.AUTO >= lev) & (bdf.REF < lev)).sum())
             fn = int(((bdf.AUTO < lev) & (bdf.REF >= lev)).sum())
             p, rc, f = prf(tp, fp, fn)
-            summary += [(f"{name} boundary (break >= {lev}): precision", p), (f"{name} boundary: recall", rc),
-                        (f"{name} boundary: F1", f)]
+            summary += [(tr('{name} boundary (break >= {lev}): precision', name=name, lev=lev), p), (tr('{name} boundary: recall', name=name), rc),
+                        (tr('{name} boundary: F1', name=name), f)]
         for unc, lab in ((False, "confident"), (True, "'?'")):
             s = bdf[bdf.AUTO_UNCERTAIN == unc]
             if len(s):
-                summary.append((f"breaks: agreement on {lab} proposals (n={len(s)})", float(np.mean(s.AUTO == s.REF))))
+                summary.append((tr('breaks: agreement on {lab} proposals (n={n_s})', lab=lab, n_s=len(s)), float(np.mean(s.AUTO == s.REF))))
     if len(tdf):
         for cat in ["accent", "Hi", "phrase", "boundary", "low"]:
             s = tdf[tdf.category == cat]
@@ -236,18 +237,18 @@ def run(auto_dir: Path, checked_dir: Path, out: Path, tol: float) -> Dict[str, p
             tp = int((s.status == "matched").sum()); fp = int((s.status == "extra").sum()); fn = int((s.status == "missed").sum())
             p, rc, f = prf(tp, fp, fn)
             m = s[s.status == "matched"]
-            summary += [(f"tones {cat}: detection precision", p), (f"tones {cat}: detection recall", rc),
-                        (f"tones {cat}: label agreement on matched (n={len(m)})",
+            summary += [(tr('tones {cat}: detection precision', cat=cat), p), (tr('tones {cat}: detection recall', cat=cat), rc),
+                        (tr('tones {cat}: label agreement on matched (n={n_m})', cat=cat, n_m=len(m)),
                          float(np.mean(m.ref == m.auto)) if len(m) else float("nan")),
-                        (f"tones {cat}: label kappa on matched", kappa(m.auto.tolist(), m.ref.tolist()) if len(m) else float("nan"))]
+                        (tr('tones {cat}: label kappa on matched', cat=cat), kappa(m.auto.tolist(), m.ref.tolist()) if len(m) else float("nan"))]
         m = tdf[tdf.status == "matched"]
         for unc, lab in ((False, "confident"), (True, "'?'")):
             s = m[m.auto_uncertain == unc]
             if len(s):
-                summary.append((f"tones: label agreement on {lab} proposals (n={len(s)})", float(np.mean(s.ref == s.auto))))
+                summary.append((tr('tones: label agreement on {lab} proposals (n={n_s})', lab=lab, n_s=len(s)), float(np.mean(s.ref == s.auto))))
     if len(ndf):
-        summary += [("nuclear configuration: exact agreement", float(np.mean(ndf.AUTO == ndf.REF))),
-                    ("nuclear configuration: kappa", kappa(ndf.AUTO.tolist(), ndf.REF.tolist()))]
+        summary += [(tr('nuclear configuration: exact agreement'), float(np.mean(ndf.AUTO == ndf.REF))),
+                    (tr('nuclear configuration: kappa'), kappa(ndf.AUTO.tolist(), ndf.REF.tolist()))]
     sdf = pd.DataFrame(summary, columns=["MEASURE", "VALUE"])
     conf = pd.crosstab(bdf.AUTO, bdf.REF, rownames=["auto"], colnames=["checked"]) if len(bdf) else pd.DataFrame()
     bnd = pd.concat(bounds, ignore_index=True) if bounds else pd.DataFrame()
@@ -264,13 +265,14 @@ def run(auto_dir: Path, checked_dir: Path, out: Path, tol: float) -> Dict[str, p
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Agreement between F_ToBI proposals and checked TextGrids")
-    ap.add_argument("--auto", help="folder with <stem>_ftobi.TextGrid")
-    ap.add_argument("--checked", help="folder with <stem>_checked.TextGrid")
+    ap = argparse.ArgumentParser(description=tr('Agreement between F_ToBI proposals and checked TextGrids'))
+    add_lang_option(ap)
+    ap.add_argument("--auto", help=tr('folder with <stem>_ftobi.TextGrid'))
+    ap.add_argument("--checked", help=tr('folder with <stem>_checked.TextGrid'))
     ap.add_argument("--out", default="outputs/ftobi_validation")
-    ap.add_argument("--tol", type=float, default=0.08, help="time window (s) for matching points")
+    ap.add_argument("--tol", type=float, default=0.08, help=tr('time window (s) for matching points'))
     ap.add_argument("--boundaries-only", nargs=2, metavar=("AUTO_TG", "HAND_TG"),
-                    help="compare AP / ip / IP boundary times of two TextGrids")
+                    help=tr('compare AP / ip / IP boundary times of two TextGrids'))
     a = ap.parse_args()
     if a.boundaries_only:
         df = boundary_agreement(read_textgrid(a.boundaries_only[0]), read_textgrid(a.boundaries_only[1]), a.tol)

@@ -35,6 +35,7 @@ import sys
 import time
 import traceback
 from pathlib import Path
+from .i18n import t as tr, add_lang_option
 
 LINES = []
 
@@ -53,16 +54,16 @@ def check_packages():
     for m in req:
         try:
             mod = importlib.import_module(m)
-            log("PASS", f"package {m}", getattr(mod, "__version__", ""))
+            log("PASS", tr('package {m}', m=m), getattr(mod, "__version__", ""))
         except Exception:
-            log("FAIL", f"package {m}", f"pip install {m}")
+            log("FAIL", tr('package {m}', m=m), tr('pip install {m}', m=m))
             ok = False
     for m, why in opt.items():
         try:
             mod = importlib.import_module(m)
-            log("PASS", f"package {m}", getattr(mod, "__version__", ""))
+            log("PASS", tr('package {m}', m=m), getattr(mod, "__version__", ""))
         except Exception:
-            log("WARN", f"package {m} not installed", why)
+            log("WARN", tr('package {m} not installed', m=m), why)
     return ok
 
 
@@ -76,7 +77,7 @@ def check_webmaus(folder: Path, work: Path):
         if t:
             pick = (w, t); break
     if pick is None:
-        log("SKIP", "WebMAUS", "no WAV with a .txt or a PFC name in the folder")
+        log("SKIP", tr('WebMAUS'), tr('no WAV with a .txt or a PFC name in the folder'))
         return
     w, t = pick
     dest = work / f"{w.stem}_webmaus_test.TextGrid"
@@ -87,22 +88,21 @@ def check_webmaus(folder: Path, work: Path):
         names = [x.name for x in tg.tiers]
         need = ["ORT-MAU", "MAU", "MAS"]
         miss = [n for n in need if n not in names]
-        log("PASS" if not miss else "FAIL", f"WebMAUS alignment of {w.name} ({time.time() - t0:.0f} s)",
-            f"service: {how}; tiers: {', '.join(names)}" + (f"; MISSING {miss}" if miss else ""))
+        log("PASS" if not miss else "FAIL", tr('WebMAUS alignment of {name} ({value:.0f} s)', name=w.name, value=time.time() - t0),
+            tr('service: {how}; tiers: {join}', how=how, join=', '.join(names)) + (tr('; MISSING {miss}', miss=miss) if miss else ""))
         mau = tg.get("MAU")
         foreign = sorted({iv.label for iv in mau.intervals if iv.label in {"I", "aU", "?", "e:", "i:", "a:"}}) if mau else []
-        log("WARN" if foreign else "PASS", "WebMAUS used the French model",
-            f"non-French symbols {foreign}" if foreign else "no German/English SAMPA symbols")
+        log("WARN" if foreign else "PASS", tr('WebMAUS used the French model'),
+            tr('non-French symbols {foreign}', foreign=foreign) if foreign else tr('no German/English SAMPA symbols'))
     except Exception as e:
-        log("FAIL", "WebMAUS alignment", f"{e}"[:400] + "  (internet? firewall? BAS server down? "
-            "-> files WITH a TextGrid still work; try again later or use --align none)")
+        log("FAIL", tr('WebMAUS alignment'), f"{e}"[:400] + tr('  (internet? firewall? BAS server down? -> files WITH a TextGrid still work; try again later or use --align none)'))
 
 
 def check_asr(folder: Path):
     try:
         importlib.import_module("faster_whisper")
     except Exception:
-        log("SKIP", "speech recognition", "faster-whisper not installed")
+        log("SKIP", tr('speech recognition'), tr('faster-whisper not installed'))
         return
     from .auto_align import asr_text, pfc_text
     wavs = [w for w in sorted(folder.glob("*.wav"))]
@@ -113,10 +113,10 @@ def check_asr(folder: Path):
     try:
         txt = asr_text(w)
         ref = pfc_text(w)
-        log("PASS", f"speech recognition on {w.name} ({time.time() - t0:.0f} s)", f"'{txt[:90]}'"
-            + (f"  | expected: '{ref[:60]}'" if ref else ""))
+        log("PASS", tr('speech recognition on {name} ({value:.0f} s)', name=w.name, value=time.time() - t0), f"'{txt[:90]}'"
+            + (tr("  | expected: '{value}'", value=ref[:60]) if ref else ""))
     except Exception as e:
-        log("FAIL", "speech recognition", str(e)[:300])
+        log("FAIL", tr('speech recognition'), str(e)[:300])
 
 
 def check_pipeline(folder: Path, out: Path, align: str):
@@ -126,45 +126,45 @@ def check_pipeline(folder: Path, out: Path, align: str):
     try:
         df = run(folder, out, align=align)
     except Exception:
-        log("FAIL", "pipeline modules.run_all", traceback.format_exc()[-600:])
+        log("FAIL", tr('pipeline modules.run_all'), traceback.format_exc()[-600:])
         return
     n = len(df)
     fd_ok = int((df.get("FINAL_DOMAIN_STATUS") == "completed").sum())
     ft_ok = int((df.get("FTOBI_STATUS") == "completed").sum())
-    log("PASS" if fd_ok == n else "WARN", "final-domain graphs", f"{fd_ok}/{n}")
-    log("PASS" if ft_ok == n else "WARN", "F_ToBI graphs", f"{ft_ok}/{n}"
-        + ("" if ft_ok == n else "  (files without alignment are skipped: see ALIGNMENT sheet)"))
+    log("PASS" if fd_ok == n else "WARN", tr('final-domain graphs'), f"{fd_ok}/{n}")
+    log("PASS" if ft_ok == n else "WARN", tr('F_ToBI graphs'), f"{ft_ok}/{n}"
+        + ("" if ft_ok == n else tr('  (files without alignment are skipped: see ALIGNMENT sheet)')))
     for _, r in df.iterrows():
         if r.get("FINAL_DOMAIN_STATUS") != "completed" or r.get("FTOBI_STATUS") != "completed":
             note = r.get("FTOBI_ERROR") if isinstance(r.get("FTOBI_ERROR"), str) else r.get("ALIGNMENT_NOTE", "")
-            log("INFO", f"  {r['AUDIO_FILE']}", f"alignment={r.get('ALIGNMENT_SOURCE')} text={r.get('TEXT_SOURCE')} "
-                f"final-domain={r.get('FINAL_DOMAIN_STATUS')} F_ToBI={r.get('FTOBI_STATUS')} {str(note)[:150]}")
+            log("INFO", f"  {r['AUDIO_FILE']}", tr('alignment={get} text={get2} final-domain={get3} F_ToBI={get4} {value}', get=r.get('ALIGNMENT_SOURCE'), get2=r.get('TEXT_SOURCE'), get3=r.get('FINAL_DOMAIN_STATUS'), get4=r.get('FTOBI_STATUS'), value=str(note)[:150]))
     bad = []
     for tg in list((out / "ftobi").glob("*_ftobi.TextGrid")) + list((out / "final_domain").glob("*_cues.TextGrid")):
         try:
             read_textgrid(tg)
         except Exception as e:
             bad.append(f"{tg.name}: {e}")
-    log("PASS" if not bad else "FAIL", "output TextGrids re-read in Praat format", "; ".join(bad)[:300] or "all readable")
+    log("PASS" if not bad else "FAIL", tr('output TextGrids re-read in Praat format'), "; ".join(bad)[:300] or tr("all readable"))
     pngs = len(list(out.rglob("*.png")))
-    log("PASS" if pngs else "FAIL", "graphs written", f"{pngs} PNG files")
+    log("PASS" if pngs else "FAIL", tr('graphs written'), tr('{pngs} PNG files', pngs=pngs))
     try:
         sheets = pd.ExcelFile(out / "intonasphere_results.xlsx").sheet_names
         need = {"README", "ALL_TOKENS", "ALIGNMENT", "PARAMETERS"}
-        log("PASS" if need <= set(sheets) else "FAIL", "workbook", ", ".join(sheets))
+        log("PASS" if need <= set(sheets) else "FAIL", tr('workbook'), ", ".join(sheets))
     except Exception as e:
-        log("FAIL", "workbook", str(e))
+        log("FAIL", tr('workbook'), str(e))
     if "CONTOUR_VS_BOUNDARY_TONE" in df:
         chk = df["CONTOUR_VS_BOUNDARY_TONE"].astype(str).str.contains("check").sum()
-        log("INFO", "contour vs boundary tone", f"{chk} file(s) marked 'check' (look at them in Praat)")
+        log("INFO", tr('contour vs boundary tone'), tr("{chk} file(s) marked 'check' (look at them in Praat)", chk=chk))
 
 
 def main():
-    ap = argparse.ArgumentParser(description="IntonaSphere AI self-test")
-    ap.add_argument("--folder", required=True, help="small test folder (WAVs, optional TextGrids / .txt)")
+    ap = argparse.ArgumentParser(description=tr('IntonaSphere AI self-test'))
+    add_lang_option(ap)
+    ap.add_argument("--folder", required=True, help=tr('small test folder (WAVs, optional TextGrids / .txt)'))
     ap.add_argument("--out", default="outputs_selftest")
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="any")
-    ap.add_argument("--skip-network", action="store_true", help="do not contact WebMAUS")
+    ap.add_argument("--skip-network", action="store_true", help=tr('do not contact WebMAUS'))
     a = ap.parse_args()
     folder, out = user_path(a.folder), user_path(a.out)
     if not any(p.suffix.lower() == ".wav" for p in folder.glob("*")) and (folder / "make_test_data.py").exists():
@@ -173,35 +173,34 @@ def main():
     if out.exists():
         shutil.rmtree(out)
     out.mkdir(parents=True)
-    log("INFO", "system", f"Python {sys.version.split()[0]} on {platform.platform()}")
-    log("INFO", "test folder", f"{folder.resolve()}  ({len(list(folder.glob('*.wav')))} WAV, "
-        f"{len(list(folder.glob('*.TextGrid')))} TextGrid, {len(list(folder.glob('*.txt')))} txt)")
-    print("\n1. packages"); ok = check_packages()
+    log("INFO", tr('system'), tr('Python {value} on {platform}', value=sys.version.split()[0], platform=platform.platform()))
+    log("INFO", tr('test folder'), tr('{resolve}  ({n_items} WAV, {n_items2} TextGrid, {n_items3} txt)', resolve=folder.resolve(), n_items=len(list(folder.glob('*.wav'))), n_items2=len(list(folder.glob('*.TextGrid'))), n_items3=len(list(folder.glob('*.txt')))))
+    print(tr('\n1. packages')); ok = check_packages()
     if not ok:
-        log("FAIL", "stopping", "install the missing packages first: pip install -r requirements.txt")
+        log("FAIL", tr('stopping'), tr('install the missing packages first: pip install -r requirements.txt'))
     else:
-        print("\n2. pitch engine")
+        print(tr('\n2. pitch engine'))
         from .final_domain_visualizer import HAVE_PARSELMOUTH
-        log("PASS" if HAVE_PARSELMOUTH else "WARN", "pitch engine",
-            "Praat via Parselmouth" if HAVE_PARSELMOUTH else "built-in tracker (pip install praat-parselmouth)")
-        print("\n3. WebMAUS")
+        log("PASS" if HAVE_PARSELMOUTH else "WARN", tr('pitch engine'),
+            tr('Praat via Parselmouth') if HAVE_PARSELMOUTH else tr('built-in tracker (pip install praat-parselmouth)'))
+        print(tr('\n3. WebMAUS'))
         if a.skip_network or a.align == "none":
-            log("SKIP", "WebMAUS", "--skip-network / --align none")
+            log("SKIP", tr('WebMAUS'), tr('--skip-network / --align none'))
         else:
             check_webmaus(folder, out)
-        print("\n4. speech recognition")
+        print(tr('\n4. speech recognition'))
         if a.align == "any":
             check_asr(folder)
         else:
-            log("SKIP", "speech recognition", f"--align {a.align}")
-        print("\n5-6. full pipeline")
+            log("SKIP", tr('speech recognition'), tr('--align {align}', align=a.align))
+        print(tr('\n5-6. full pipeline'))
         check_pipeline(folder, out / "run", "none" if a.skip_network else a.align)
     fails = sum(l.startswith("[FAIL") for l in LINES)
     warns = sum(l.startswith("[WARN") for l in LINES)
-    summary = f"\nRESULT: {'ALL PASSED' if not fails else str(fails) + ' FAILED'}, {warns} warning(s)"
+    summary = tr('\nRESULT: {value}, {warns} warning(s)', value=tr('ALL PASSED') if not fails else tr('{n} FAILED', n=fails), warns=warns)
     print(summary)
     (out / "selftest_report.txt").write_text("\n".join(LINES) + "\n" + summary + "\n", encoding="utf-8")
-    print(f"Report: {out / 'selftest_report.txt'}   Outputs to inspect: {out / 'run'}")
+    print(tr('Report: {value}   Outputs to inspect: {value2}', value=out / 'selftest_report.txt', value2=out / 'run'))
     sys.exit(1 if fails else 0)
 
 

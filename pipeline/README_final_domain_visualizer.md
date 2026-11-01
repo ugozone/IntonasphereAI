@@ -1,5 +1,7 @@
 # Final-domain visualizer (IntonaSphere AI)
 
+**English** | [Français](README_final_domain_visualizer.fr.md)
+
 Creates, for every question token:
 
 - **`<file>_final_domain.png`**: a Praat-style figure with the waveform, spectrogram and F0 track, plus the tiers. The final syllable is shaded, and a zoom panel marks F0 onset, peak and offset with their times and values, the fitted slope and the duration.

@@ -108,6 +108,7 @@ from .final_domain_visualizer import (
     HAVE_PARSELMOUTH, Interval, Point, Tier, TextGrid, read_textgrid, write_textgrid,
     load_wav, adaptive_pitch, match_textgrid, PFC_QUESTIONS, sentence_id,
 )
+from .i18n import t as tr, add_lang_option
 
 _PAUSES = {"", "<p:>", "<p>", "sil", "silence", "pause", "#", "<usb>", "<nib>", "_"}
 
@@ -921,7 +922,7 @@ def run_folder(folder, out, cfg: Optional[FToBIConfig] = None, fixed_range=None,
     cfg = cfg or FToBIConfig()
     folder, out = Path(folder), Path(out)
     align_dir = Path(align_dir) if align_dir else out / "aligned"
-    print(f"Alignment mode: {align}  (existing TextGrids are always used unchanged)")
+    print(tr('Alignment mode: {align}  (existing TextGrids are always used unchanged)', align=align))
     aligned = ensure_alignments(folder, align_dir, align, language, asr_model)
     rows, syl_frames = [], []
     for i, a in enumerate(aligned, 1):
@@ -940,21 +941,21 @@ def run_folder(folder, out, cfg: Optional[FToBIConfig] = None, fixed_range=None,
         except Exception as e:
             rows.append({"AUDIO_FILE": w.name, "TEXTGRID_IN": tg.name, "STATUS": "failed", "ERROR": str(e), **prov})
     df = write_tables(rows, syl_frames, cfg, out)
-    print(f"\nDone: {len(df)} files -> {out}")
+    print(tr('\nDone: {n_df} files -> {out}', n_df=len(df), out=out))
     return df
 
 
 def main():
-    ap = argparse.ArgumentParser(description="IntonaSphere AI F_ToBI assistant")
+    ap = argparse.ArgumentParser(description=tr('IntonaSphere AI F_ToBI assistant'))
+    add_lang_option(ap)
     ap.add_argument("--folder", required=True,
-                    help="Folder with .wav files and, optionally, their WebMAUS .TextGrid or .txt files")
+                    help=tr('Folder with .wav files and, optionally, their WebMAUS .TextGrid or .txt files'))
     ap.add_argument("--out", default="outputs/ftobi")
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="any",
-                    help="none: WAV + TextGrid required (original behaviour); pfc: align PFC files and "
-                         "files with a .txt via WebMAUS; any: also use speech recognition for other files")
-    ap.add_argument("--align-dir", default=None, help="where new TextGrids go (default: <out>/aligned)")
-    ap.add_argument("--language", default="fra-FR", help="WebMAUS language (default French, fra-FR)")
-    ap.add_argument("--asr-model", default="small", help="faster-whisper model for --align any")
+                    help=tr('none: WAV + TextGrid required (original behaviour); pfc: align PFC files and files with a .txt via WebMAUS; any: also use speech recognition for other files'))
+    ap.add_argument("--align-dir", default=None, help=tr('where new TextGrids go (default: <out>/aligned)'))
+    ap.add_argument("--language", default="fra-FR", help=tr('WebMAUS language (default French, fra-FR)'))
+    ap.add_argument("--asr-model", default="small", help=tr('faster-whisper model for --align any'))
     ap.add_argument("--pitch-range", nargs=2, type=float, metavar=("FLOOR", "CEILING"))
     for k, v in asdict(FToBIConfig()).items():
         ap.add_argument(f"--{k.replace('_', '-')}", type=float, default=v)

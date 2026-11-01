@@ -62,6 +62,7 @@ import pandas as pd
 from scipy.io import wavfile
 
 from .final_domain_visualizer import Interval, Tier, TextGrid, write_textgrid, read_textgrid
+from .i18n import t as tr, add_lang_option
 
 SENTENCE_END = re.compile(r"[.?!…]+[\"»”)]*$")
 SPLIT_MODES = ("sentences", "segments")
@@ -213,7 +214,7 @@ def read_textgrid_segments(path: Path, tier: Optional[str] = None) -> List[Segme
             for iv in chosen.intervals if iv.label.strip().lower() not in PAUSE_LABELS]
     if not segs:
         raise ValueError(f"{path.name}: tier {chosen.name!r} has no labelled intervals")
-    print(f"  TextGrid tier used: {chosen.name!r} ({len(segs)} labelled intervals)")
+    print(tr('  TextGrid tier used: {name!r} ({n_segs} labelled intervals)', name=chosen.name, n_segs=len(segs)))
     return segs
 
 
@@ -435,31 +436,31 @@ def run(media: Path, out: Path, srt: Optional[Path] = None, transcript: Optional
     df.to_csv(out / "segments.csv", index=False, encoding=CSV_ENCODING)
     n_skip = int(df.STATUS.astype(str).str.startswith("skipped").sum()) if len(df) else 0
     n_flag = int(((df.STATUS == "written") & (df.NOTES.astype(str) != "")).sum()) if len(df) else 0
-    print(f"{media.name}: phrase times from {how}")
-    print(f"  {n} clips written to {out}  |  {n_skip} skipped  |  {n_flag} with a note to check (segments.csv)")
-    print(f"  next: python -m modules.run_all --folder \"{out}\" --out \"{out}_results\" --measure both")
+    print(tr('{name}: phrase times from {how}', name=media.name, how=how))
+    print(tr('  {n} clips written to {out}  |  {n_skip} skipped  |  {n_flag} with a note to check (segments.csv)', n=n, out=out, n_skip=n_skip, n_flag=n_flag))
+    print(tr('  next: python -m modules.run_all --folder "{out}" --out "{out}_results" --measure both', out=out))
     return df
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Cut a long recording (audio or video) into one WAV + .txt per phrase")
-    ap.add_argument("--media", required=True, help="audio or video file (wav, mp3, m4a, mp4, mov ...)")
-    ap.add_argument("--out", required=True, help="folder for the clips (created if needed)")
+    ap = argparse.ArgumentParser(description=tr('Cut a long recording (audio or video) into one WAV + .txt per phrase'))
+    add_lang_option(ap)
+    ap.add_argument("--media", required=True, help=tr('audio or video file (wav, mp3, m4a, mp4, mov ...)'))
+    ap.add_argument("--out", required=True, help=tr('folder for the clips (created if needed)'))
     src = ap.add_mutually_exclusive_group()
-    src.add_argument("--segments", help="CSV/XLSX with columns start, end, text (+ optional id, label)")
-    src.add_argument("--textgrid", help="Praat TextGrid: each labelled interval of --tier becomes a clip (e.g. PFC)")
-    src.add_argument("--srt", help="subtitle file with the phrase times (e.g. IntonaSphere's .srt)")
-    src.add_argument("--transcript", help="IntonaSphere transcript (.docx/.txt) with '[12.34s - 15.67s] text' lines")
-    src.add_argument("--text", help="plain text, no times: word times come from faster-whisper")
+    src.add_argument("--segments", help=tr('CSV/XLSX with columns start, end, text (+ optional id, label)'))
+    src.add_argument("--textgrid", help=tr('Praat TextGrid: each labelled interval of --tier becomes a clip (e.g. PFC)'))
+    src.add_argument("--srt", help=tr("subtitle file with the phrase times (e.g. IntonaSphere's .srt)"))
+    src.add_argument("--transcript", help=tr("IntonaSphere transcript (.docx/.txt) with '[12.34s - 15.67s] text' lines"))
+    src.add_argument("--text", help=tr('plain text, no times: word times come from faster-whisper'))
     ap.add_argument("--split", choices=SPLIT_MODES, default="sentences",
-                    help="sentences (default) = one clip per sentence where word times allow; segments = as given")
-    ap.add_argument("--pad", type=float, default=0.15, help="seconds of context kept around each phrase (default 0.15)")
-    ap.add_argument("--min-dur", type=float, default=0.25, help="flag phrases shorter than this (s)")
-    ap.add_argument("--match", help="only phrases whose text matches this pattern, e.g. '\\?' for questions")
-    ap.add_argument("--keep-suspect", action="store_true", help="also write phrases flagged as recognition loops")
-    ap.add_argument("--tier", help="TextGrid tier to cut by (default: the tier with the most multi-word intervals)")
-    ap.add_argument("--prefix", default="", help="added before every clip name, e.g. the speaker code '11aab1_' "
-                                                 "(keeps clips from several recordings apart in one folder)")
+                    help=tr('sentences (default) = one clip per sentence where word times allow; segments = as given'))
+    ap.add_argument("--pad", type=float, default=0.15, help=tr('seconds of context kept around each phrase (default 0.15)'))
+    ap.add_argument("--min-dur", type=float, default=0.25, help=tr('flag phrases shorter than this (s)'))
+    ap.add_argument("--match", help=tr("only phrases whose text matches this pattern, e.g. '\\?' for questions"))
+    ap.add_argument("--keep-suspect", action="store_true", help=tr('also write phrases flagged as recognition loops'))
+    ap.add_argument("--tier", help=tr('TextGrid tier to cut by (default: the tier with the most multi-word intervals)'))
+    ap.add_argument("--prefix", default="", help=tr("added before every clip name, e.g. the speaker code '11aab1_' (keeps clips from several recordings apart in one folder)"))
     ap.add_argument("--asr-model", default="small")
     ap.add_argument("--language", default="fr")
     a = ap.parse_args()

@@ -1,3 +1,4 @@
+from app_i18n import tr
 import base64
 from pathlib import Path
 
@@ -29,7 +30,7 @@ def load_global_css(css_path: str = "styles.css"):
         st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
 
     except FileNotFoundError:
-        st.warning(f"CSS file not found: {css_path}")
+        st.warning(tr('CSS file not found: {css_path}', css_path=css_path))
 
 
 
@@ -78,12 +79,12 @@ def render_mobile_responsive_navbar():
 
     with right:
         with st.popover("☰", use_container_width=True):
-            st.markdown("### Navigate")
-            st.markdown("[Input](#input)")
-            st.markdown("[Transcription](#transcription)")
-            st.markdown("[Phonetics](#phonetics)")
-            st.markdown("[Prosody](#prosody)")
-            st.markdown("[Exports](#exports)")
+            st.markdown(tr('### Navigate'))
+            st.markdown(tr('[Input](#input)'))
+            st.markdown(tr('[Transcription](#transcription)'))
+            st.markdown(tr('[Phonetics](#phonetics)'))
+            st.markdown(tr('[Prosody](#prosody)'))
+            st.markdown(tr('[Exports](#exports)'))
 
     st.markdown(
         """
@@ -302,73 +303,66 @@ def render_global_hero():
 
 
 def render_global_feature_cards():
-    st.markdown("## Built for global speech, teaching, and research")
+    st.markdown(tr('## Built for global speech, teaching, and research'))
     st.write(
-        "Designed for linguists, language teachers, researchers, students, and speech-technology builders "
-        "working across accents, scripts, regions, and multilingual communities."
+        tr('Designed for linguists, language teachers, researchers, students, and speech-technology builders working across accents, scripts, regions, and multilingual communities.')
     )
 
     col1, col2, col3 = st.columns(3)
 
     with col1:
-        st.markdown("### Multilingual Transcription")
+        st.markdown(tr('### Multilingual Transcription'))
         st.write(
-            "Process audio, video, recordings, and public media links with speech-to-text "
-            "support for language learning, fieldwork, and research workflows."
+            tr('Process audio, video, recordings, and public media links with speech-to-text support for language learning, fieldwork, and research workflows.')
         )
 
     with col2:
-        st.markdown("### Phonetic + Prosodic Intelligence")
+        st.markdown(tr('### Phonetic + Prosodic Intelligence'))
         st.write(
-            "Generate phonetic representations, extract F0 movement, locate prominence, "
-            "and connect pitch patterns to words, syllables, phones, AP/IP domains, and interrogative meaning."
+            tr('Generate phonetic representations, extract F0 movement, locate prominence, and connect pitch patterns to words, syllables, phones, AP/IP domains, and interrogative meaning.')
         )
 
     with col3:
-        st.markdown("### Research-Ready Outputs")
+        st.markdown(tr('### Research-Ready Outputs'))
         st.write(
-            "Export coherent speaker-level reports, acoustic tables, subtitles, and pitch-contour images "
-            "in TXT, DOCX, PDF, CSV, Excel, SRT, and PNG formats."
+            tr('Export coherent speaker-level reports, acoustic tables, subtitles, and pitch-contour images in TXT, DOCX, PDF, CSV, Excel, SRT, and PNG formats.')
         )
 
 
 def render_research_workflow():
-    st.markdown("## Analysis workflow")
+    st.markdown(tr('## Analysis workflow'))
 
     col1, col2, col3, col4, col5 = st.columns(5)
 
     with col1:
-        st.markdown("**1. Input**")
-        st.caption("Upload audio/video, record speech, paste media URL, or pair audio with TextGrid.")
+        st.markdown(tr('**1. Input**'))
+        st.caption(tr('Upload audio/video, record speech, paste media URL, or pair audio with TextGrid.'))
 
     with col2:
-        st.markdown("**2. Transcribe**")
-        st.caption("Generate orthographic transcript and verify accuracy with WER indices.")
+        st.markdown(tr('**2. Transcribe**'))
+        st.caption(tr('Generate orthographic transcript and verify accuracy with WER indices.'))
 
     with col3:
-        st.markdown("**3. Phonetic Layer**")
-        st.caption("Route text through global phonetic engines and display engine reliability notes.")
+        st.markdown(tr('**3. Phonetic Layer**'))
+        st.caption(tr('Route text through global phonetic engines and display engine reliability notes.'))
 
     with col4:
-        st.markdown("**4. Prosody**")
-        st.caption("Extract F0, AP/IP windows, TextGrid intervals, and prominence markers.")
+        st.markdown(tr('**4. Prosody**'))
+        st.caption(tr('Extract F0, AP/IP windows, TextGrid intervals, and prominence markers.'))
 
     with col5:
-        st.markdown("**5. Export**")
-        st.caption("Download full reports, acoustic tables, subtitles, and pitch-contour images.")
+        st.markdown(tr('**5. Export**'))
+        st.caption(tr('Download full reports, acoustic tables, subtitles, and pitch-contour images.'))
 
 
 def render_trust_banner():
     st.info(
-        "Transparent by design: every phonetic output includes the engine used, language code, "
-        "fallback status, and a reliability note. For research, TextGrid/Praat verification remains "
-        "the gold standard for timing-sensitive acoustic interpretation."
+        tr('Transparent by design: every phonetic output includes the engine used, language code, fallback status, and a reliability note. For research, TextGrid/Praat verification remains the gold standard for timing-sensitive acoustic interpretation.')
     )
 
 
 def render_global_footer():
     st.markdown("---")
     st.caption(
-        "IntonaSphere AI · Built for multilingual research, "
-        "language education, and speech technology across Africa, Europe, Asia, and the world."
+        tr('IntonaSphere AI · Built for multilingual research, language education, and speech technology across Africa, Europe, Asia, and the world.')
     )

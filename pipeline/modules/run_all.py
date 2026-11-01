@@ -53,6 +53,7 @@ from .ftobi_annotator import FToBIConfig, annotate, write_tables
 from .auto_align import ensure_alignments
 from .pitch_range import plan_ranges
 from .dataset_sheet import (DATASET_COLUMNS, load_speakers, dataset_row, codebook_df)
+from .i18n import t as tr, add_lang_option
 
 SHARED = ["TOKEN_ID", "SPEAKER_ID", "SENTENCE_ID", "AUDIO_FILE", "PITCH_ENGINE", "PITCH_FLOOR_HZ", "PITCH_CEILING_HZ"]
 
@@ -86,9 +87,7 @@ def _check_outputs_writable(*dirs: Path) -> None:
             except PermissionError:
                 locked.append(f.name)
     if locked:
-        raise SystemExit("These result files are open in another program (e.g. Excel) and cannot be "
-                         "overwritten:\n  " + "\n  ".join(locked) + "\nClose them, or choose another --out folder, "
-                         "then run the command again.")
+        raise SystemExit(tr('These result files are open in another program (e.g. Excel) and cannot be overwritten:\n  ') + "\n  ".join(locked) + tr('\nClose them, or choose another --out folder, then run the command again.'))
 
 
 def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, ftobi: bool = True,
@@ -103,26 +102,22 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     fd_dir, ft_dir, al_dir = out / "final_domain", out / "ftobi", out / "aligned"
     _check_outputs_writable(out, fd_dir, ft_dir)
     t0 = time.time()
-    print(f"IntonaSphere AI  |  folder: {folder}  |  alignment: {align}  |  "
-          f"final-domain: {'on' if final_domain else 'off'}  |  F_ToBI: {'on' if ftobi else 'off'}  |  "
-          f"pitch: {'Praat (Parselmouth)' if HAVE_PARSELMOUTH else 'built-in Praat-style tracker'}")
+    print(tr('IntonaSphere AI  |  folder: {folder}  |  alignment: {align}  |  final-domain: {value}  |  F_ToBI: {value2}  |  pitch: {value3}', folder=folder, align=align, value=tr('on') if final_domain else tr('off'), value2=tr('on') if ftobi else tr('off'), value3='Praat (Parselmouth)' if HAVE_PARSELMOUTH else tr('built-in Praat-style tracker')))
     speakers, sp_info = None, {}
     if speakers_file:
         speakers, sp_info = load_speakers(Path(speakers_file), age_tie, speaker_fixes, speakers_sheet)
-        print(f"Speaker table: {sp_info['file']} [{sp_info['sheet']}], {sp_info['speakers']} speakers; "
-              f"AGE_GROUP rule: {sp_info['age_rule']}")
+        print(tr('Speaker table: {file} [{sheet}], {speakers} speakers; AGE_GROUP rule: {age_rule}', file=sp_info['file'], sheet=sp_info['sheet'], speakers=sp_info['speakers'], age_rule=sp_info['age_rule']))
     ds_rows: List[Dict] = []
     ds_warn: List[Dict] = []
-    print("Step 1/2  alignment")
+    print(tr('Step 1/2  alignment'))
     if realign:
-        print("Re-aligning EVERY file with WebMAUS (your TextGrids are kept only for comparison)")
+        print(tr('Re-aligning EVERY file with WebMAUS (your TextGrids are kept only for comparison)'))
     aligned = ensure_alignments(folder, al_dir, align, language, asr_model, realign=realign)
     ranges: Dict[str, Dict] = {}
     if not fixed_range:
-        print(f"Pitch ranges: two-pass, pooled per {pitch_method}"
-              f"{', first pass by sex' if first_pass_by_sex and speakers is not None else ''}")
+        print(tr('Pitch ranges: two-pass, pooled per {pitch_method}{value}', pitch_method=tr(pitch_method), value=tr(', first pass by sex') if first_pass_by_sex and speakers is not None else ''))
         ranges = plan_ranges([a.wav for a in aligned], pitch_method, speakers, first_pass_by_sex)
-    print("Step 2/2  analysis")
+    print(tr('Step 2/2  analysis'))
     fd_rows: List[Dict] = []
     ft_rows: List[Dict] = []
     syl_frames: List[pd.DataFrame] = []
@@ -136,8 +131,8 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
                 "USER_TEXTGRID": str(a.user_textgrid) if a.user_textgrid else ""}
         note = f"  ({a.alignment_source})" if a.alignment_source else ""
         if tg is None:
-            note = f"  -> final-domain with automatic segmentation, F_ToBI skipped [{a.message[:90]}]"
-        print(f"[{i}/{len(aligned)}] {w.name:24s} textgrid: {tg.name if tg else 'none'}{note}")
+            note = tr('  -> final-domain with automatic segmentation, F_ToBI skipped [{message}]', message=a.message[:90])
+        print(tr('[{i}/{n_aligned}] {name:24s} textgrid: {value}{note}', i=i, n_aligned=len(aligned), name=w.name, value=tg.name if tg else 'none', note=note))
         try:
             x, sr = load_wav(w)
             # one pitch track per file, shared by both analyses
@@ -273,7 +268,7 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     if not final_domain:
         ds_warn.append({"AUDIO_FILE": "(all)", "WARNING": "final-domain step off: CONTOUR_CLASS, FINAL_* and ALIGNMENT_TIME are empty"})
     with pd.ExcelWriter(out / "intonasphere_results.xlsx", engine="openpyxl") as xw:
-        pd.DataFrame(README_ROWS, columns=["SHEET / TOPIC", "DESCRIPTION"]).to_excel(xw, sheet_name="README", index=False)
+        pd.DataFrame([(tr(k), tr(v)) for k, v in README_ROWS], columns=["SHEET / TOPIC", "DESCRIPTION"]).to_excel(xw, sheet_name="README", index=False)
         ds.to_excel(xw, sheet_name="DATASET", index=False)
         codebook_df().to_excel(xw, sheet_name="CODEBOOK", index=False)
         if speakers is not None:
@@ -294,44 +289,40 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     n = len(all_df)
     ok_fd = int((all_df.get("FINAL_DOMAIN_STATUS") == "completed").sum()) if "FINAL_DOMAIN_STATUS" in all_df else 0
     ok_ft = int((all_df.get("FTOBI_STATUS") == "completed").sum()) if "FTOBI_STATUS" in all_df else 0
-    print(f"\nDone in {time.time() - t0:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  "
-          f"F_ToBI graphs: {ok_ft}\n  -> {out / 'intonasphere_results.xlsx'}")
+    print(tr('\nDone in {value:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  F_ToBI graphs: {ok_ft}\n  -> {value2}', value=time.time() - t0, n=n, ok_fd=ok_fd, ok_ft=ok_ft, value2=out / 'intonasphere_results.xlsx'))
     return all_df
 
 
 def main():
-    ap = argparse.ArgumentParser(description="IntonaSphere AI: alignment + final-domain graph + F_ToBI graph, "
-                                             "one row per recording")
-    ap.add_argument("--folder", required=True, help="Folder with .wav files (+ optional .TextGrid / .txt)")
+    ap = argparse.ArgumentParser(description=tr('IntonaSphere AI: alignment + final-domain graph + F_ToBI graph, one row per recording'))
+    add_lang_option(ap)
+    ap.add_argument("--folder", required=True, help=tr('Folder with .wav files (+ optional .TextGrid / .txt)'))
     ap.add_argument("--out", default="outputs")
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="any",
-                    help="none: use only existing TextGrids; pfc: WebMAUS for PFC names and .txt files; "
-                         "any: also speech recognition for other recordings")
-    ap.add_argument("--no-final-domain", action="store_true", help="skip the final-domain graph")
-    ap.add_argument("--no-ftobi", action="store_true", help="skip the F_ToBI graph")
+                    help=tr('none: use only existing TextGrids; pfc: WebMAUS for PFC names and .txt files; any: also speech recognition for other recordings'))
+    ap.add_argument("--no-final-domain", action="store_true", help=tr('skip the final-domain graph'))
+    ap.add_argument("--no-ftobi", action="store_true", help=tr('skip the F_ToBI graph'))
     ap.add_argument("--realign", action="store_true",
-                    help="align EVERY WAV with WebMAUS (PFC text from the file name, or x.txt), ignoring existing "
-                         "TextGrids; they are only recorded, for comparison with modules.compare_runs")
+                    help=tr('align EVERY WAV with WebMAUS (PFC text from the file name, or x.txt), ignoring existing TextGrids; they are only recorded, for comparison with modules.compare_runs'))
     ap.add_argument("--tier", default="MAS")
     ap.add_argument("--slope-threshold", type=float, default=1.5)
     ap.add_argument("--pitch-range", nargs=2, type=float, metavar=("FLOOR", "CEILING"))
-    ap.add_argument("--language", default="fra-FR")
+    ap.add_argument("--language", default="fra-FR",
+                    help=tr("WebMAUS alignment language (default fra-FR); the language of messages is --lang"))
     ap.add_argument("--asr-model", default="small")
     ap.add_argument("--svg", action="store_true")
-    ap.add_argument("--speakers", default=None, help="speaker table (.xlsx or .csv): Speaker code, Site, Country, "
-                                                     "Region, Sex, Age")
+    ap.add_argument("--speakers", default=None, help=tr('speaker table (.xlsx or .csv): Speaker code, Site, Country, Region, Sex, Age'))
     ap.add_argument("--pitch-method", choices=["speaker", "file"], default="speaker",
-                    help="pool the first pitch pass per speaker (default) or per file (previous behaviour)")
+                    help=tr('pool the first pitch pass per speaker (default) or per file (previous behaviour)'))
     ap.add_argument("--no-sex-first-pass", action="store_true",
-                    help="first pitch pass 60-600 Hz for everyone instead of by sex")
-    ap.add_argument("--speakers-sheet", default=None, help="sheet of the speaker table (default: found automatically)")
+                    help=tr('first pitch pass 60-600 Hz for everyone instead of by sex'))
+    ap.add_argument("--speakers-sheet", default=None, help=tr('sheet of the speaker table (default: found automatically)'))
     ap.add_argument("--age-tie", choices=["Older", "Younger"], default="Older",
-                    help="group of a speaker whose age equals the median (default Older)")
+                    help=tr('group of a speaker whose age equals the median (default Older)'))
     ap.add_argument("--speaker-fix", action="append", default=[], metavar="TABLE_CODE=CORRECT_CODE",
-                    help="correct a speaker code in the table, e.g. --speaker-fix 81acc1=81aac1 (repeatable)")
+                    help=tr('correct a speaker code in the table, e.g. --speaker-fix 81acc1=81aac1 (repeatable)'))
     ap.add_argument("--measure", choices=["final", "both"], default="final",
-                    help="final = final-syllable cues only (default); both = also measure the whole phrase "
-                         "(PHRASE_F0_ONSET/MAX/MIN/OFFSET_HZ, PHRASE_F0_RANGE_ST, PHRASE_F0_CHANGE_ST, PHRASE_SLOPE_ST)")
+                    help=tr('final = final-syllable cues only (default); both = also measure the whole phrase (PHRASE_F0_ONSET/MAX/MIN/OFFSET_HZ, PHRASE_F0_RANGE_ST, PHRASE_F0_CHANGE_ST, PHRASE_SLOPE_ST)'))
     a = ap.parse_args()
     run(user_path(a.folder), user_path(a.out), a.align, not a.no_final_domain, not a.no_ftobi, FToBIConfig(),
         a.slope_threshold, a.tier, tuple(a.pitch_range) if a.pitch_range else None, a.language,

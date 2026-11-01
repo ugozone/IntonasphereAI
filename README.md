@@ -1,10 +1,20 @@
 # IntonaSphere AI Transcriber + Praat Analyzer
 
+**English** | [Français](README.fr.md)
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23290623.svg)](https://doi.org/10.5281/zenodo.23290623) [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 Website: https://intonasphereai.org/
 
 This app transcribes audio/video files and performs phonetic/acoustic analysis using Praat through Parselmouth.
+
+## English or French
+
+IntonaSphere AI works in English or in French; the data it writes is the same in both.
+
+- **App:** choose **Language / Langue** at the top of the sidebar. It starts in the language saved by the pipeline installer, or in your computer's language.
+- **Pipeline:** `python3 install.py` in `pipeline/` asks *Language / Langue* once and every command then speaks that language; add `--lang en` or `--lang fr` to any command to change it for one run. See [pipeline/README.md](pipeline/README.md#install-in-english-or-french).
+- Column names, sheet names, file names and F_ToBI labels never change with the language, so results from both can be pooled.
 
 ## Features
 
@@ -47,8 +57,7 @@ The [`pipeline/`](pipeline/) folder holds the command-line research pipeline use
 
 ```bash
 cd ~/IntonasphereAI/pipeline   # or: cd /path/to/IntonasphereAI/pipeline
-python3 -m pip install -r requirements.txt
-python3 -m modules.selftest --folder test_data
+python3 install.py             # English or French, installs the packages, runs the self-test
 python3 -m modules.run_all --folder ~/Desktop/pfc_all --out ~/Desktop/pfc_results --align pfc --speakers metadata/pfc_speaker_table_corrected.xlsx
 ```
 

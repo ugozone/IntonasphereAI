@@ -26,6 +26,7 @@ import numpy as np
 import pandas as pd
 
 from .validate_ftobi import kappa
+from .i18n import t as tr, add_lang_option
 
 
 def load(folder: Path) -> pd.DataFrame:
@@ -35,20 +36,21 @@ def load(folder: Path) -> pd.DataFrame:
     c = folder / "intonasphere_results.csv"
     if c.exists():
         return pd.read_csv(c, encoding=CSV_ENCODING)
-    raise SystemExit(f"No intonasphere_results.xlsx/.csv in {folder}")
+    raise SystemExit(tr('No intonasphere_results.xlsx/.csv in {folder}', folder=folder))
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Compare two IntonaSphere runs on the same recordings")
-    ap.add_argument("--a", required=True, help="first results folder (e.g. with your TextGrids)")
-    ap.add_argument("--b", required=True, help="second results folder (e.g. --realign)")
-    ap.add_argument("--label-a", default="your TextGrids")
-    ap.add_argument("--label-b", default="re-aligned (WebMAUS)")
+    ap = argparse.ArgumentParser(description=tr('Compare two IntonaSphere runs on the same recordings'))
+    add_lang_option(ap)
+    ap.add_argument("--a", required=True, help=tr('first results folder (e.g. with your TextGrids)'))
+    ap.add_argument("--b", required=True, help=tr('second results folder (e.g. --realign)'))
+    ap.add_argument("--label-a", default=tr("your TextGrids"))
+    ap.add_argument("--label-b", default=tr("re-aligned (WebMAUS)"))
     ap.add_argument("--out", default=None)
     ap.add_argument("--include-unaligned", action="store_true",
-                    help="also compare files that had no alignment in one of the runs (normally left out)")
+                    help=tr('also compare files that had no alignment in one of the runs (normally left out)'))
     ap.add_argument("--only-user-textgrids", action="store_true",
-                    help="compare only recordings for which run A used your own TextGrid")
+                    help=tr('compare only recordings for which run A used your own TextGrid'))
     a = ap.parse_args()
     A, B = load(user_path(a.a)), load(user_path(a.b))
     if a.only_user_textgrids and "ALIGNMENT_SOURCE" in A:
@@ -61,10 +63,10 @@ def main():
         al = lambda c: m[c].fillna("").astype(str).str.strip().str.lower().isin(["", "none", "nan"])
         m = m[~al("ALIGNMENT_SOURCE_A") & ~al("ALIGNMENT_SOURCE_B")].reset_index(drop=True)
     out = user_path(a.out) if a.out else user_path(a.b)
-    L = [f"IntonaSphere: comparison of two runs",
+    L = [tr('IntonaSphere: comparison of two runs'),
          f"A = {a.label_a}: {a.a}", f"B = {a.label_b}: {a.b}",
-         f"Recordings in both runs: {n_all}; compared (aligned in both runs): {len(m)}"
-         + (" (A restricted to your own TextGrids)" if a.only_user_textgrids else ""), ""]
+         tr('Recordings in both runs: {n_all}; compared (aligned in both runs): {n_m}', n_all=n_all, n_m=len(m))
+         + (tr(' (A restricted to your own TextGrids)') if a.only_user_textgrids else ""), ""]
     rows = []
 
     def num(col):
@@ -114,7 +116,7 @@ def main():
     if "CONTOUR_SAME" in per:
         diff = per[per.CONTOUR_SAME == "NO"]
         if len(diff):
-            L += ["", f"Recordings whose contour class differs ({len(diff)}): look at both graphs in Praat"]
+            L += ["", tr('Recordings whose contour class differs ({n_diff}): look at both graphs in Praat', n_diff=len(diff))]
             L += [f"  {r.AUDIO_FILE}: {r.CONTOUR_CLASS_A} -> {r.CONTOUR_CLASS_B}" for _, r in diff.head(40).iterrows()]
     txt = "\n".join(L)
     print(txt)
@@ -125,7 +127,7 @@ def main():
         per.to_excel(xw, sheet_name="PER_FILE", index=False)
         if "ct" in locals():
             ct.to_excel(xw, sheet_name="CONTOUR_CROSSTAB")
-    print(f"\nReport: {out / 'compare_runs_report.txt'}   Details: {out / 'compare_runs.xlsx'}")
+    print(tr('\nReport: {value}   Details: {value2}', value=out / 'compare_runs_report.txt', value2=out / 'compare_runs.xlsx'))
 
 
 if __name__ == "__main__":

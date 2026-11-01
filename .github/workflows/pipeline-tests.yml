@@ -5,9 +5,9 @@ name: Pipeline tests (Windows, macOS, Linux)
 on:
   push:
     branches: [main]
-    paths: ["pipeline/**", ".github/workflows/pipeline-tests.yml"]
+    paths: ["pipeline/**", "app.py", "app_i18n.py", "ui_components.py", "messages/**", "tools/**", ".github/workflows/pipeline-tests.yml"]
   pull_request:
-    paths: ["pipeline/**", ".github/workflows/pipeline-tests.yml"]
+    paths: ["pipeline/**", "app.py", "app_i18n.py", "ui_components.py", "messages/**", "tools/**", ".github/workflows/pipeline-tests.yml"]
   workflow_dispatch:
 
 jobs:
@@ -29,8 +29,20 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install
         run: python -m pip install -r requirements.txt
-      - name: Self-test (synthetic recordings, no network)
-        run: python -m modules.selftest --folder test_data --skip-network
+      - name: Translations complete (pipeline and app)
+        run: |
+          python tools/check_translations.py
+          python ../tools/check_app_translations.py
+      - name: Installer, in French, without questions
+        run: python install.py --lang fr --yes --no-pip --no-selftest
+      - name: Self-test in French (synthetic recordings, no network)
+        run: python -m modules.selftest --folder test_data --skip-network --lang fr
+      - name: Self-test in English (synthetic recordings, no network)
+        run: python -m modules.selftest --folder test_data --skip-network --lang en
+      - name: Help in both languages
+        run: |
+          python -m modules.run_all --help --lang fr
+          python -m modules.run_all --help --lang en
       - name: Full run with a home-folder path (~) and the other commands
         shell: bash
         run: |

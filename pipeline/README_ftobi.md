@@ -1,5 +1,7 @@
 # IntonaSphere AI: F_ToBI assistant
 
+**English** | [Français](README_ftobi.fr.md)
+
 `modules/ftobi_annotator.py` takes each question's WAV file and its WebMAUS TextGrid. It **proposes** a full F_ToBI annotation as Praat tiers: tones, break indices, AP / ip / IP, syllables and phones in IPA. A trained annotator then checks the proposal in Praat.
 
 `modules/validate_ftobi.py` measures how much the annotator had to correct, and that is the validation figure for the paper. The tool never replaces the annotator. It produces a first pass that can be checked, so that annotating 129 tokens becomes feasible and reproducible.
