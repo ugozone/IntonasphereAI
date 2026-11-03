@@ -83,13 +83,14 @@ def find_matching_file(
     """
     Strict PFC-aware audio/TextGrid matching for all speakers.
 
-    For question rows:
+    For target-sentence rows:
     Q1 must match tw1.
     Q2 must match tw2.
     Q3 must match tw3.
+    S4 (the statement "Le village de Beaulieu est en grand émoi") must match tw4.
 
-    If the correct Q-specific file is missing, return None.
-    Do not reuse Q1 or a bare speaker file for Q2/Q3.
+    If the correct sentence-specific file is missing, return None.
+    Do not reuse another sentence's file or a bare speaker file.
     """
 
     search_path = Path(search_dir)
@@ -113,7 +114,18 @@ def find_matching_file(
     def stem_norm(f):
         return normalize_string(f.stem)
 
-    derived_markers = ["ph", "emoi", "pitch", "copy", "backup"]
+    question_number = ""
+
+    if sentence_norm in {"q1", "q2", "q3", "s4"}:
+        question_number = sentence_norm[-1]
+    elif token_norm.endswith(("q1", "q2", "q3", "s4")):
+        question_number = token_norm[-1]
+
+    # "emoi" marks derived files for Q1–Q3, but it is the final word of S4,
+    # so S4 files named after it (e.g. ...tw4_emoi) must not be filtered out.
+    derived_markers = ["ph", "pitch", "copy", "backup"]
+    if question_number != "4":
+        derived_markers.append("emoi")
 
     clean_files = [
         f for f in files
@@ -123,21 +135,10 @@ def find_matching_file(
     if not clean_files:
         clean_files = files
 
-    question_number = ""
-
-    if sentence_norm in {"q1", "q2", "q3"}:
-        question_number = sentence_norm[-1]
-    elif token_norm.endswith("q1"):
-        question_number = "1"
-    elif token_norm.endswith("q2"):
-        question_number = "2"
-    elif token_norm.endswith("q3"):
-        question_number = "3"
-
     speaker_base = speaker_norm
 
     # If speaker is already a task file such as rcamp1tw1, reduce it to rcamp1.
-    if speaker_base.endswith(("tw1", "tw2", "tw3")):
+    if speaker_base.endswith(("tw1", "tw2", "tw3", "tw4")):
         speaker_base = speaker_base[:-3]
 
     candidate_bases = []
@@ -157,10 +158,14 @@ def find_matching_file(
         # rcamp1tw1_Q1 -> rcamp1tw1
         if token_norm:
             token_base = token_norm
-            for q in ["q1", "q2", "q3"]:
+            for q in ["q1", "q2", "q3", "s4"]:
                 if token_base.endswith(q):
                     token_base = token_base[:-len(q)].rstrip("_-")
-            if token_base:
+            # Only use the token base if it names this sentence's task file
+            # (e.g. rcamp1tw1); a bare "rcamp1tw" would otherwise match any tw file.
+            if token_base.endswith("tw"):
+                token_base += question_number
+            if token_base.endswith("tw" + question_number):
                 candidate_bases.append(token_base)
 
         # Remove duplicate candidates
@@ -187,7 +192,7 @@ def find_matching_file(
                 return str(matches[0])
 
         # Critical rule:
-        # For Q1/Q2/Q3 rows, do not fall back to another question's file.
+        # For Q1/Q2/Q3/S4 rows, do not fall back to another sentence's file.
         return None
 
     # Non-question rows only: allow exact speaker match

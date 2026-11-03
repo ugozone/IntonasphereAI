@@ -58,8 +58,9 @@ See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `c
 
 ## PFC master sheet
 
-Token-level PFC extraction now also writes a master sheet with speaker metadata,
-quality-control flags and token-selection decisions, plus a token-flow table.
+Token-level PFC extraction now also writes a master sheet for the three questions
+(Q1–Q3) and the statement S4, with speaker metadata, quality-control flags and
+token-selection decisions, plus a token-flow table by sentence.
 Manual decisions are kept in `manual_overrides.csv` across re-runs.
 See [`docs/master_sheet.md`](docs/master_sheet.md).
 

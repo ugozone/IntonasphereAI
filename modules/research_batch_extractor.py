@@ -62,7 +62,7 @@ def run_pfc_token_level_extraction(
     pitch_ceiling:
         Praat pitch ceiling. Default is 500 Hz.
     build_master_sheet:
-        Also write PFC_Q1_Q2_Q3_master.xlsx (speaker metadata, QC flags,
+        Also write the master sheet (Q1–Q3 and S4; speaker metadata, QC flags,
         token-selection decisions) when the template has a speaker table.
     overrides_path:
         Optional CSV of manual token decisions; see modules/master_sheet.py.

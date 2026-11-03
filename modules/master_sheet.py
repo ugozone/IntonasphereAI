@@ -1,25 +1,29 @@
 """
-IntonaSphere AI — PFC Q1–Q3 master sheet and token-selection rule.
+IntonaSphere AI — PFC master sheet (Q1–Q3 and the statement S4) and token-selection rule.
 
 Builds one analysis-ready sheet from the token-level extraction output:
   * merges speaker metadata (site, country, region, age, age group, sex) from the
     'combined speaker table' sheet of the template workbook;
-  * adds planned rows for speakers/questions that have no measurements yet;
+  * adds planned rows for speakers/sentences that have no measurements yet
+    (Q1–Q3 always; the statement S4 when PLAN_S4 is True);
   * flags quality-control problems (failed extraction, missing alignment, mis-cut
     extraction window, missing final-region measures, filename in transcript);
   * applies the pre-registered token-selection rule, which is anchored on the final
-    word group of each question (where the nuclear configuration is realized);
+    word group of each sentence (where the nuclear configuration is realized);
+  * marks the complete-case set (Q1–Q3 all included) and the RQ4 set (S4 and at
+    least one question included);
   * merges manual decisions from an overrides CSV, which re-runs never overwrite.
 
 It is called automatically at the end of token_level_praat_extractor.process_token_level_workbook()
 and can also be run on its own:
 
   python -m modules.master_sheet --acoustics PFC_token_level_praat_filled.csv \
-      --speakers PFC_template.xlsx --out outputs/PFC_Q1_Q2_Q3_master.xlsx \
+      --speakers PFC_template.xlsx --out outputs/PFC_master.xlsx \
       [--overrides outputs/manual_overrides.csv] [--flow outputs/token_flow.csv]
 
 Overrides CSV columns: TOKEN_ID, PITCH_TRACK_CHECKED (yes/no),
-MANUAL_DECISION (Include/Exclude; blank keeps the automatic decision), MANUAL_NOTE.
+MANUAL_DECISION (Include/Exclude, or e.g. 'Not available' for an S4 that does not exist;
+blank keeps the automatic decision), MANUAL_NOTE.
 """
 import argparse, re, unicodedata
 import numpy as np
@@ -27,13 +31,18 @@ import pandas as pd
 
 # ----------------------------------------------------------------- configuration
 SPEAKER_SHEET = 'combined speaker table'
-QUESTIONS = {
-    # id: (question type, official target text, final word group used by the rule)
+SENTENCES = {
+    # id: (sentence type, official target text, final word group used by the rule)
     'Q1': ('YN_inversion', 'Le Premier Ministre ira-t-il à Beaulieu ?', 'à beaulieu'),
     'Q2': ('Wh_quest_ce_qui', 'Qu’est-ce qui a donc valu à Beaulieu ce grand honneur ?', 'grand honneur'),
     'Q3': ('Wh_comment_infinitive', 'Comment, en plus, éviter les manifestations qui ont eu tendance '
            'à se multiplier lors des visites officielles ?', 'visites officielles'),
+    'S4': ('Statement_declarative', 'Le village de Beaulieu est en grand émoi.', 'grand émoi'),
 }
+QUESTION_IDS = ('Q1', 'Q2', 'Q3')     # the interrogatives (RQ1–RQ3)
+STATEMENT_ID = 'S4'                    # the statement used as within-speaker baseline (RQ4)
+QUESTIONS = SENTENCES                  # backward-compatible name
+PLAN_S4 = True                         # add a 'Pending – no data' S4 row for speakers without one
 SITE_FIXES = {'senegal': 'Sénégal', 'RCA Bangui': 'Bangui'}
 SPEAKER_ALIASES = {}          # e.g. {'81aac1': '81acc1'} once confirmed
 AGE_RULE = 'gt_median'        # Older = age above the sample median ('ge_median' = at or above)
@@ -74,7 +83,7 @@ def assess_transcript(text, qid, speaker_code):
     if stray:
         tech.append('filename_in_transcript')
         words = [w for w in words if w not in stray]
-    final = norm_words(QUESTIONS[qid][2])
+    final = norm_words(SENTENCES[qid][2])
     k = len(final)
     occurrences = find_all(words, final)
     complete = words[-k:] == final
@@ -123,18 +132,21 @@ def build(acoustics, speakers_path, overrides_path=None):
     meta = sp.set_index('code')
 
     ac['code'] = ac['SPEAKER_ID'].astype(str).str.replace(r'tw\d?$', '', regex=True).replace(SPEAKER_ALIASES)
-    # planned rows for speakers/questions without measurements
+    ac['SENTENCE_ID'] = ac['SENTENCE_ID'].astype(str).str.strip().str.upper()
+    # planned rows for speakers/sentences without measurements
+    planned = list(QUESTION_IDS) + ([STATEMENT_ID] if PLAN_S4 else [])
     have = set(zip(ac['code'], ac['SENTENCE_ID']))
     missing = [{'TOKEN_ID': f'{c}tw_{q}', 'SPEAKER_ID': f'{c}tw', 'SENTENCE_ID': q, 'code': c}
-               for c in meta.index for q in QUESTIONS if (c, q) not in have]
+               for c in meta.index for q in planned if (c, q) not in have]
     df = pd.concat([ac, pd.DataFrame(missing)], ignore_index=True)
 
     df['SITE_ID'] = df['code'].map(meta['Site']);  df['COUNTRY'] = df['code'].map(meta['Country'])
     df['CONTINENT'] = df['code'].map(meta['Region']); df['REGION_GROUP'] = df['CONTINENT']
     df['AGE'] = df['code'].map(meta['Age']);  df['AGE_GROUP'] = df['code'].map(meta['AGE_GROUP'])
     df['SEX'] = df['code'].map(meta['Sex']);  df['GENDER_LABEL'] = df['SEX'].map({'F': 'Female', 'M': 'Male'})
-    df['QUESTION_TYPE'] = df['SENTENCE_ID'].map({q: v[0] for q, v in QUESTIONS.items()})
-    df['TARGET_TEXT'] = df['SENTENCE_ID'].map({q: v[1] for q, v in QUESTIONS.items()})
+    df['QUESTION_TYPE'] = df['SENTENCE_ID'].map({q: v[0] for q, v in SENTENCES.items()})
+    df['SENTENCE_TYPE'] = np.where(df['SENTENCE_ID'] == STATEMENT_ID, 'declarative', 'interrogative')
+    df['TARGET_TEXT'] = df['SENTENCE_ID'].map({q: v[1] for q, v in SENTENCES.items()})
     df['SPEAKER_DATA_STATUS'] = df['code'].map(meta['STATUS'])
 
     med_dur = df.groupby('SENTENCE_ID')['TOTAL_DURATION'].transform('median')
@@ -143,10 +155,10 @@ def build(acoustics, speakers_path, overrides_path=None):
         flags = []
         if r['code'] not in meta.index:
             flags.append('speaker_not_in_speaker_table')
-        if r['SENTENCE_ID'] not in QUESTIONS:
+        if r['SENTENCE_ID'] not in SENTENCES:
             flags.append('unknown_sentence_id')
             qc.append(';'.join(flags)); dec.append('Pending – metadata')
-            why.append('SENTENCE_ID is not Q1, Q2 or Q3'); continue
+            why.append('SENTENCE_ID is not Q1, Q2, Q3 or S4'); continue
         status = r.get('PRAAT_STATUS')
         if pd.isna(r.get('F0_MEAN_ST')) and isinstance(status, str) and status not in ('', 'completed'):
             flags.append('extraction_failed')
@@ -191,26 +203,40 @@ def build(acoustics, speakers_path, overrides_path=None):
                 df[col] = np.where(m.notna() & (m != ''), m, df[col])
     df['SELECTION_DECISION'] = np.where(df['MANUAL_DECISION'] != '', df['MANUAL_DECISION'], df['AUTO_DECISION'])
     inc = df['SELECTION_DECISION'].eq('Include')
-    n_inc = df[inc].groupby('SPEAKER_ID').size()
-    df['COMPLETE_CASE_SET'] = df['SPEAKER_ID'].map(lambda s: 'yes' if n_inc.get(s, 0) == len(QUESTIONS) else 'no')
+    q_inc = df[inc & df['SENTENCE_ID'].isin(QUESTION_IDS)].groupby('code').size()
+    s_inc = set(df.loc[inc & (df['SENTENCE_ID'] == STATEMENT_ID), 'code'])
+    # complete-case set: all three questions included (sensitivity analysis, RQ1–RQ3)
+    df['COMPLETE_CASE_SET'] = df['code'].map(lambda c: 'yes' if q_inc.get(c, 0) == len(QUESTION_IDS) else 'no')
+    # RQ4 set: S4 included and at least one question included for the same speaker
+    df['RQ4_SET'] = df['code'].map(lambda c: 'yes' if c in s_inc and q_inc.get(c, 0) > 0 else 'no')
 
     df = df.sort_values(['CONTINENT', 'SITE_ID', 'SPEAKER_ID', 'SENTENCE_ID'], na_position='last')
     front = ['TOKEN_ID', 'SPEAKER_ID', 'SITE_ID', 'COUNTRY', 'CONTINENT', 'REGION_GROUP', 'AGE', 'AGE_GROUP',
-             'SEX', 'GENDER_LABEL', 'SENTENCE_ID', 'QUESTION_TYPE', 'TARGET_TEXT', 'SENTENCE_TEXT']
+             'SEX', 'GENDER_LABEL', 'SENTENCE_ID', 'SENTENCE_TYPE', 'QUESTION_TYPE', 'TARGET_TEXT', 'SENTENCE_TEXT']
     back = ['SPEAKER_DATA_STATUS', 'QC_FLAGS', 'QC_OK', 'AUTO_DECISION', 'AUTO_REASON',
-            'PITCH_TRACK_CHECKED', 'MANUAL_DECISION', 'MANUAL_NOTE', 'SELECTION_DECISION', 'COMPLETE_CASE_SET']
+            'PITCH_TRACK_CHECKED', 'MANUAL_DECISION', 'MANUAL_NOTE', 'SELECTION_DECISION', 'COMPLETE_CASE_SET',
+            'RQ4_SET']
     middle = [c for c in df.columns if c not in front + back + ['code']]
     return df[front + middle + back]
 
 def token_flow(df):
-    rows = [('Planned tokens (speakers x questions)', len(df[df['SITE_ID'].notna()]))]
-    for d in ['Pending – no data', 'Pending – metadata', 'Repair, then reassess', 'Exclude', 'Include']:
-        rows.append((d, int((df['SELECTION_DECISION'] == d).sum())))
+    """Token flow, overall and by sentence (Q1, Q2, Q3, S4)."""
+    sent = [q for q in SENTENCES if q in set(df['SENTENCE_ID'])]
+    def counts(mask):
+        return [int(mask.sum())] + [int((mask & (df['SENTENCE_ID'] == q)).sum()) for q in sent]
+    rows = [['Planned tokens (speakers x sentences)'] + counts(df['SITE_ID'].notna())]
+    decisions = ['Pending – no data', 'Pending – metadata', 'Repair, then reassess', 'Exclude', 'Include']
+    decisions += sorted(set(df['SELECTION_DECISION']) - set(decisions))      # e.g. manual 'Not available'
+    for d in decisions:
+        rows.append([d] + counts(df['SELECTION_DECISION'] == d))
     inc = df['SELECTION_DECISION'] == 'Include'
-    rows += [('Speakers with >= 1 included token', df[inc]['SPEAKER_ID'].nunique()),
-             ('Speakers in complete-case set', df[df['COMPLETE_CASE_SET'] == 'yes']['SPEAKER_ID'].nunique()),
-             ('Included tokens with pitch track checked', int((inc & (df['PITCH_TRACK_CHECKED'] == 'yes')).sum()))]
-    return pd.DataFrame(rows, columns=['Step', 'N'])
+    rows.append(['Included tokens with pitch track checked'] + counts(inc & (df['PITCH_TRACK_CHECKED'] == 'yes')))
+    blank = [None] * len(sent)
+    rows += [['Speakers with >= 1 included token', df[inc]['SPEAKER_ID'].nunique()] + blank,
+             ['Speakers in complete-case set (Q1–Q3)', df[df['COMPLETE_CASE_SET'] == 'yes']['SPEAKER_ID'].nunique()] + blank,
+             ['Speakers in RQ4 set (S4 + >= 1 question)', df[df['RQ4_SET'] == 'yes']['SPEAKER_ID'].nunique()] + blank]
+    out = pd.DataFrame(rows, columns=['Step', 'All'] + sent)
+    return out.astype({c: 'Int64' for c in sent})
 
 def write_xlsx(df, path):
     from openpyxl import Workbook
