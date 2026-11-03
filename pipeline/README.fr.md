@@ -224,6 +224,21 @@ python -m modules.selection --results outputs/intonasphere_results.xlsx
 
 Le contrôle du groupe de mots final lit le tier des mots du TextGrid : il ne voit donc que les hésitations transcrites. Les TextGrids produits par WebMAUS à partir du texte PFC contiennent le texte, et non ce que le lecteur a dit ; `TRANSCRIPT_SOURCE` indique de quel type est chaque énoncé.
 
+### Vérifier les énoncés listés dans Praat
+
+Certaines décisions demandent l'oreille et l'œil. Un script ouvre ces énoncés dans Praat un par un, avec un zoom sur la fin de la phrase et la plage de F0 réglée sur 50–500 Hz, et écrit votre décision à votre place.
+
+1. Créez la liste (dans le Terminal, dans le dossier `pipeline`) :
+
+   ```bash
+   python -m modules.review_list --results outputs/intonasphere_results.xlsx --folder data/wavs
+   ```
+
+   Elle comprend trois vérifications : **1** les énoncés exclus pour « pas de F0 dans la syllabe finale » (regardez avec un plancher de F0 plus bas, et vérifiez la frontière de la syllabe finale) ; **2** les énoncés à écouter ; **3** les énoncés retenus dont le TextGrid a été produit par WebMAUS à partir du texte PFC (écoutez le groupe de mots final). `--tasks 1,2` n'en liste que certaines. Les énoncés déjà marqués `CHECKED = yes` sont laissés de côté.
+2. Dans Praat : **Open → Open Praat script…** `praat/review_tokens.praat`, puis **Run**. Donnez-lui `outputs/review_list.tsv` et `outputs/manual_overrides.csv`.
+3. Pour chaque énoncé, choisissez **Include**, **Exclude**, **TextGrid corrected** (après avoir déplacé une frontière dans l'éditeur ; le TextGrid est enregistré et une copie de l'original est gardée dans `outputs/review_backups/`), **F0 only with a lower floor** ou **Not sure**, ajoutez une note si vous le souhaitez, puis cliquez sur **Save & next**. **Stop** met fin à la séance ; relancez le script plus tard pour reprendre là où vous vous êtes arrêté.
+4. Mettez ensuite les décisions à jour avec `python -m modules.selection --results outputs/intonasphere_results.xlsx`, ou relancez `run_all` (même `--out`) si vous avez corrigé un TextGrid.
+
 ## Les commandes séparées fonctionnent toujours
 
 | Commande | Rôle |

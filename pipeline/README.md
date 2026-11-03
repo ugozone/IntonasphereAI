@@ -224,6 +224,21 @@ python -m modules.selection --results outputs/intonasphere_results.xlsx
 
 The final-word-group check reads the word tier of the TextGrid, so it can only see hesitations that are transcribed. TextGrids made by WebMAUS from the PFC text contain the text, not what the reader said; `TRANSCRIPT_SOURCE` says which kind each token has.
 
+### Checking the listed tokens in Praat
+
+Some decisions need your ears and eyes. A script opens those tokens in Praat one at a time, zoomed to the end of the sentence with the pitch range set to 50–500 Hz, and writes your decision for you.
+
+1. Make the list (in Terminal, in the `pipeline` folder):
+
+   ```bash
+   python -m modules.review_list --results outputs/intonasphere_results.xlsx --folder data/wavs
+   ```
+
+   It lists three checks: **1** tokens excluded for "no F0 in the final syllable" (look with a lower pitch floor, and check the final-syllable boundary); **2** tokens to check by listening; **3** included tokens whose TextGrid WebMAUS made from the PFC text (listen to the final word group). `--tasks 1,2` lists only some of them. Tokens already marked `CHECKED = yes` are left out.
+2. In Praat: **Open → Open Praat script…** `praat/review_tokens.praat`, then **Run**. Give it `outputs/review_list.tsv` and `outputs/manual_overrides.csv`.
+3. For each token, choose **Include**, **Exclude**, **TextGrid corrected** (after moving a boundary in the editor; the TextGrid is saved and a copy of the original kept in `outputs/review_backups/`), **F0 only with a lower floor**, or **Not sure**, add a note if you like, and click **Save & next**. **Stop** ends the session; run the script again later to continue where you stopped.
+4. Then update the decisions with `python -m modules.selection --results outputs/intonasphere_results.xlsx`, or run `run_all` again (same `--out`) if you corrected a TextGrid.
+
 ## The separate commands still work
 
 | Command | Does |

@@ -252,7 +252,8 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
              "NUC_EDGE_TONE", "NUC_EDGE_PREDICTED", "NUC_EDGE_TEST", "QC_WARNINGS",
              "FINAL_DOMAIN_FIGURE", "FTOBI_FIGURE"]
     all_df = all_df[[c for c in first if c in all_df.columns] + [c for c in all_df.columns if c not in first]]
-    params = [{"STEP": "run", "PARAMETER": "alignment mode", "VALUE": align + (" + realign (every file aligned with WebMAUS)" if realign else "")},
+    params = [{"STEP": "run", "PARAMETER": "input folder", "VALUE": str(folder)},
+              {"STEP": "run", "PARAMETER": "alignment mode", "VALUE": align + (" + realign (every file aligned with WebMAUS)" if realign else "")},
               {"STEP": "run", "PARAMETER": "WebMAUS language", "VALUE": language},
               {"STEP": "pitch", "PARAMETER": "engine", "VALUE": "Praat (Parselmouth)" if HAVE_PARSELMOUTH else "built-in"},
               {"STEP": "pitch", "PARAMETER": "range", "VALUE": f"fixed {fixed_range}" if fixed_range else

@@ -9,6 +9,7 @@ One package with everything; it replaces all earlier zips.
 | `python3 -m modules.run_all ... --realign` | Aligns every file again with WebMAUS from the sound and its text, ignoring existing TextGrids, so the whole set is aligned by one procedure. |
 | `python3 -m modules.compare_runs --a O1 --b O2` | Compares two runs (e.g. your TextGrids vs. `--realign`): boundary differences in ms, cue differences, contour and nuclear agreement with kappa. |
 | `python3 -m modules.selection --results O/intonasphere_results.xlsx` | Re-applies the token-selection rule after you edit `manual_overrides.csv`, without measuring again. Takes `--lang en|fr` like the other commands. |
+| `python3 -m modules.review_list --results O/intonasphere_results.xlsx --folder F` + Praat: `praat/review_tokens.praat` | Lists the tokens to check by ear and eye, then opens them in Praat one at a time and writes your decisions. |
 | `python3 -m modules.selftest --folder test_data` | Tests the installation on your computer. |
 | `python3 -m modules.validate_ftobi --auto O/ftobi --checked O/ftobi` | Measures agreement between the F_ToBI proposals and an annotator's corrections. |
 | `python3 -m modules.segment_media --media film.mp4 --srt film.srt --out F` | Cuts a long recording (audio or video) into one WAV + .txt per phrase, ready for `run_all`. Times from a CSV, subtitles, a TextGrid, an IntonaSphere transcript, or speech recognition. |
@@ -20,6 +21,7 @@ One package with everything; it replaces all earlier zips.
 ## Added on 3 November 2026
 
 - **Token selection:** every run writes SELECTION, TOKEN_FLOW and TOKEN_FLOW_BY_SITE sheets with a keep / exclude / check decision and its reason for every token, following the quality-control rules of the methodology. Manual decisions are read from `manual_overrides.csv`, which is never overwritten; `python -m modules.selection` re-applies the rule after you edit it, without re-measuring. Tested by `tests/test_selection.py`.
+- **Checking tokens in Praat:** `python3 -m modules.review_list` lists the tokens that need ears and eyes (no F0 in the final syllable, articulation rate below 2 syll/s, final word group of TextGrids made from the PFC text), and `praat/review_tokens.praat` opens them one at a time (zoomed, 50–500 Hz), saves corrected TextGrids after a backup, and writes the decisions to `manual_overrides.csv`. Tested by `tests/test_review_list.py`.
 
 ## Added on 1 November 2026: English or French
 

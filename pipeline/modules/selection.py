@@ -209,8 +209,10 @@ def _transcript_source(r: Dict) -> str:
     text = str(r.get("TEXT_SOURCE") or "")
     if src == "user_textgrid":
         return "your TextGrid"
-    if src.startswith("webmaus") or "webmaus" in src.lower():
-        return f"WebMAUS from {text or 'text'}" + (" (hesitations not transcribed)" if "pfc" in text.lower() else "")
+    if "webmaus" in src.lower():
+        if not text:                     # a cached alignment from an earlier run: its text source is not recorded
+            return "WebMAUS (cached alignment; hesitations may not be transcribed)"
+        return f"WebMAUS from {text}" + (" (hesitations not transcribed)" if "pfc" in text.lower() else "")
     return src or ""
 
 
