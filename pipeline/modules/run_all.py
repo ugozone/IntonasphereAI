@@ -12,6 +12,9 @@ For every WAV in a folder, in a single pass:
   3. final-domain graph + cues   (modules/final_domain_visualizer.py)
   4. F_ToBI graph + annotation   (modules/ftobi_annotator.py)
   5. one Excel workbook with everything, one row per recording
+  6. token selection: keep / exclude / check, with the reason, for every token, following the
+     quality-control rules of the methodology (modules/selection.py; manual decisions are read
+     from manual_overrides.csv and never overwritten)
 
     python -m modules.run_all --folder data/wavs --out outputs
     python -m modules.run_all --folder data/wavs --out outputs --no-ftobi
@@ -22,6 +25,8 @@ Output layout
       intonasphere_results.xlsx   README / ALL_TOKENS / FINAL_DOMAIN / FTOBI_TOKENS /
                                   FTOBI_SYLLABLES / ALIGNMENT / PARAMETERS
       intonasphere_results.csv    the ALL_TOKENS sheet
+      intonasphere_selection.csv  the SELECTION sheet (decision and reason for every token)
+      manual_overrides.csv        your manual decisions (created empty once, never overwritten)
       final_domain/               x_final_domain.png, x_cues.TextGrid, final_domain_cues.xlsx
       ftobi/                      x_ftobi.png, x_ftobi.TextGrid, ftobi_annotations.xlsx,
                                   ftobi_praat_ranges.csv  (open with praat/check_ftobi.praat)
@@ -54,6 +59,7 @@ from .auto_align import ensure_alignments
 from .pitch_range import plan_ranges
 from .dataset_sheet import (DATASET_COLUMNS, load_speakers, dataset_row, codebook_df)
 from .i18n import t as tr, add_lang_option
+from . import selection as selection_rule
 
 SHARED = ["TOKEN_ID", "SPEAKER_ID", "SENTENCE_ID", "AUDIO_FILE", "PITCH_ENGINE", "PITCH_FLOOR_HZ", "PITCH_CEILING_HZ"]
 
@@ -69,6 +75,12 @@ README_ROWS = [
     ("FTOBI_SYLLABLES", "Every syllable with its cues and the decision taken (evidence for the F_ToBI labels)."),
     ("ALIGNMENT", "Where each TextGrid came from (your TextGrid, WebMAUS with your text / PFC text / speech recognition)."),
     ("PARAMETERS", "Every threshold used in this run, so the run can be repeated exactly."),
+    ("SELECTION", "Keep / exclude decision and its reason for every token (and every planned speaker x sentence "
+                  "without a recording). SELECTION_DECISION = your MANUAL_DECISION if you gave one, else AUTO_DECISION."),
+    ("TOKEN_FLOW", "Tokens per decision, by sentence; speakers in the complete-case set (Q1-Q3) and the RQ4 set (S4)."),
+    ("TOKEN_FLOW_BY_SITE", "Included, flagged, excluded and pending tokens by site and sentence."),
+    ("Manual decisions", "Edit manual_overrides.csv (TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE), then "
+                         "python -m modules.selection --results <this workbook> to update the decisions without re-measuring."),
     ("Verification", "Open ftobi/*_ftobi.TextGrid with praat/check_ftobi.praat; then python -m modules.validate_ftobi."),
     ("Labels", "F_ToBI labels are PROPOSALS. A '?' marks a low-confidence label: check those first."),
 ]
@@ -96,7 +108,8 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
         asr_model: str = "small", svg: bool = False, speakers_file: Optional[Path] = None,
         age_tie: str = "Older", speaker_fixes: Optional[Dict[str, str]] = None,
         speakers_sheet: Optional[str] = None, pitch_method: str = "speaker",
-        first_pass_by_sex: bool = True, realign: bool = False, measure_domain: str = "final") -> pd.DataFrame:
+        first_pass_by_sex: bool = True, realign: bool = False, measure_domain: str = "final",
+        overrides_file: Optional[Path] = None, plan_s4: bool = True) -> pd.DataFrame:
     cfg = cfg or FToBIConfig()
     folder, out = Path(folder), Path(out)
     fd_dir, ft_dir, al_dir = out / "final_domain", out / "ftobi", out / "aligned"
@@ -267,6 +280,13 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
                     "VALUE": ", ".join(f"{k} -> {v}" for k, v in sp_info["code_fixes"].items()) or "none"}]
     if not final_domain:
         ds_warn.append({"AUDIO_FILE": "(all)", "WARNING": "final-domain step off: CONTOUR_CLASS, FINAL_* and ALIGNMENT_TIME are empty"})
+    # token selection (quality control); manual decisions from the overrides file
+    ov_path = selection_rule.ensure_overrides_file(Path(overrides_file) if overrides_file else out / "manual_overrides.csv")
+    sel = selection_rule.select(ds, all_df, speakers, selection_rule.read_overrides(ov_path), plan_s4=plan_s4)
+    sel.to_csv(out / "intonasphere_selection.csv", index=False, encoding=CSV_ENCODING)
+    sel_flow, sel_site = selection_rule.token_flow(sel), selection_rule.token_flow_by_site(sel)
+    params += selection_rule.parameters_rows()
+    params.append({"STEP": "selection", "PARAMETER": "overrides file", "VALUE": str(ov_path)})
     with pd.ExcelWriter(out / "intonasphere_results.xlsx", engine="openpyxl") as xw:
         pd.DataFrame([(tr(k), tr(v)) for k, v in README_ROWS], columns=["SHEET / TOPIC", "DESCRIPTION"]).to_excel(xw, sheet_name="README", index=False)
         ds.to_excel(xw, sheet_name="DATASET", index=False)
@@ -278,6 +298,9 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
         if len(fd): fd.to_excel(xw, sheet_name="FINAL_DOMAIN", index=False)
         if len(ftdf): ftdf.to_excel(xw, sheet_name="FTOBI_TOKENS", index=False)
         if len(sdf): sdf.to_excel(xw, sheet_name="FTOBI_SYLLABLES", index=False)
+        sel.to_excel(xw, sheet_name="SELECTION", index=False)
+        sel_flow.to_excel(xw, sheet_name="TOKEN_FLOW", index=False)
+        sel_site.to_excel(xw, sheet_name="TOKEN_FLOW_BY_SITE", index=False)
         al_log.to_excel(xw, sheet_name="ALIGNMENT", index=False)
         pd.DataFrame(params).to_excel(xw, sheet_name="PARAMETERS", index=False)
         for ws in xw.book.worksheets:                     # readable column widths + frozen header
@@ -289,7 +312,8 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     n = len(all_df)
     ok_fd = int((all_df.get("FINAL_DOMAIN_STATUS") == "completed").sum()) if "FINAL_DOMAIN_STATUS" in all_df else 0
     ok_ft = int((all_df.get("FTOBI_STATUS") == "completed").sum()) if "FTOBI_STATUS" in all_df else 0
-    print(tr('\nDone in {value:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  F_ToBI graphs: {ok_ft}\n  -> {value2}', value=time.time() - t0, n=n, ok_fd=ok_fd, ok_ft=ok_ft, value2=out / 'intonasphere_results.xlsx'))
+    n_inc = int(sel["SELECTION_DECISION"].eq(selection_rule.INCLUDE).sum())
+    print(tr('\nDone in {value:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  F_ToBI graphs: {ok_ft}  |  tokens included: {n_inc} (see SELECTION / TOKEN_FLOW)\n  -> {value2}', value=time.time() - t0, n=n, ok_fd=ok_fd, ok_ft=ok_ft, n_inc=n_inc, value2=out / 'intonasphere_results.xlsx'))
     return all_df
 
 
@@ -323,12 +347,16 @@ def main():
                     help=tr('correct a speaker code in the table, e.g. --speaker-fix 81acc1=81aac1 (repeatable)'))
     ap.add_argument("--measure", choices=["final", "both"], default="final",
                     help=tr('final = final-syllable cues only (default); both = also measure the whole phrase (PHRASE_F0_ONSET/MAX/MIN/OFFSET_HZ, PHRASE_F0_RANGE_ST, PHRASE_F0_CHANGE_ST, PHRASE_SLOPE_ST)'))
+    ap.add_argument("--overrides", default=None,
+                    help=tr('CSV of manual token decisions (default: OUT/manual_overrides.csv, created empty if missing)'))
+    ap.add_argument("--no-plan-s4", action="store_true",
+                    help=tr('do not list a pending S4 row for speakers in the speaker table who have no S4 recording'))
     a = ap.parse_args()
     run(user_path(a.folder), user_path(a.out), a.align, not a.no_final_domain, not a.no_ftobi, FToBIConfig(),
         a.slope_threshold, a.tier, tuple(a.pitch_range) if a.pitch_range else None, a.language,
         a.asr_model, a.svg, user_path(a.speakers), a.age_tie,
         dict(f.split("=", 1) for f in a.speaker_fix), a.speakers_sheet, a.pitch_method,
-        not a.no_sex_first_pass, a.realign, a.measure)
+        not a.no_sex_first_pass, a.realign, a.measure, user_path(a.overrides), not a.no_plan_s4)
 
 
 if __name__ == "__main__":

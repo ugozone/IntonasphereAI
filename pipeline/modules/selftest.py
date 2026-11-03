@@ -149,10 +149,19 @@ def check_pipeline(folder: Path, out: Path, align: str):
     log("PASS" if pngs else "FAIL", tr('graphs written'), tr('{pngs} PNG files', pngs=pngs))
     try:
         sheets = pd.ExcelFile(out / "intonasphere_results.xlsx").sheet_names
-        need = {"README", "ALL_TOKENS", "ALIGNMENT", "PARAMETERS"}
+        need = {"README", "ALL_TOKENS", "ALIGNMENT", "PARAMETERS", "SELECTION", "TOKEN_FLOW"}
         log("PASS" if need <= set(sheets) else "FAIL", tr('workbook'), ", ".join(sheets))
     except Exception as e:
         log("FAIL", tr('workbook'), str(e))
+    try:
+        from .selection import SELECTION_COLUMNS, DECISION_ORDER
+        sel = pd.read_excel(out / "intonasphere_results.xlsx", sheet_name="SELECTION")
+        ok = list(sel.columns) == SELECTION_COLUMNS and len(sel) >= n and \
+            sel["SELECTION_DECISION"].isin(DECISION_ORDER).all() and sel["AUTO_REASON"].notna().all()
+        log("PASS" if ok else "FAIL", tr('token selection'),
+            ", ".join(f"{k}: {v}" for k, v in sel["SELECTION_DECISION"].value_counts().items()))
+    except Exception as e:
+        log("FAIL", tr('token selection'), str(e))
     if "CONTOUR_VS_BOUNDARY_TONE" in df:
         chk = df["CONTOUR_VS_BOUNDARY_TONE"].astype(str).str.contains("check").sum()
         log("INFO", tr('contour vs boundary tone'), tr("{chk} file(s) marked 'check' (look at them in Praat)", chk=chk))

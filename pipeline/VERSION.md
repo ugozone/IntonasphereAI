@@ -1,4 +1,4 @@
-# IntonaSphere AI pipeline - version of 1 November 2026
+# IntonaSphere AI pipeline - version of 3 November 2026
 
 One package with everything; it replaces all earlier zips.
 
@@ -8,6 +8,7 @@ One package with everything; it replaces all earlier zips.
 | `python3 -m modules.run_all --folder F --out O --align pfc --speakers metadata/pfc_speaker_table_corrected.xlsx` | The full extraction: alignment, pitch, final-domain graph, F_ToBI graph and the 28-column DATASET with its CODEBOOK. |
 | `python3 -m modules.run_all ... --realign` | Aligns every file again with WebMAUS from the sound and its text, ignoring existing TextGrids, so the whole set is aligned by one procedure. |
 | `python3 -m modules.compare_runs --a O1 --b O2` | Compares two runs (e.g. your TextGrids vs. `--realign`): boundary differences in ms, cue differences, contour and nuclear agreement with kappa. |
+| `python3 -m modules.selection --results O/intonasphere_results.xlsx` | Re-applies the token-selection rule after you edit `manual_overrides.csv`, without measuring again. Takes `--lang en|fr` like the other commands. |
 | `python3 -m modules.selftest --folder test_data` | Tests the installation on your computer. |
 | `python3 -m modules.validate_ftobi --auto O/ftobi --checked O/ftobi` | Measures agreement between the F_ToBI proposals and an annotator's corrections. |
 | `python3 -m modules.segment_media --media film.mp4 --srt film.srt --out F` | Cuts a long recording (audio or video) into one WAV + .txt per phrase, ready for `run_all`. Times from a CSV, subtitles, a TextGrid, an IntonaSphere transcript, or speech recognition. |
@@ -15,6 +16,10 @@ One package with everything; it replaces all earlier zips.
 | `python3 -m modules.coding_table --results R1 R2 --design d.csv --corrections c.csv --out t.xlsx` | Builds one coding table from one or more runs: study design + measures + semitone formulas, values to check in Praat in orange, hand corrections in blue and logged. `--design-by question` for PFC. |
 | `python3 install.py [--lang en|fr] [--yes] [--with-asr]` | Installs everything in English or French, remembers the language for every command, runs the self-test. Any command takes `--lang en` or `--lang fr`. |
 | Praat: `praat/verify_final_domain.praat`, `draw_final_domain.praat`, `draw_ftobi.praat`, `check_ftobi.praat` (French: `*_fr.praat`) | Re-measure the values in Praat, draw both graphs in Praat, and correct the F_ToBI proposals. |
+
+## Added on 3 November 2026
+
+- **Token selection:** every run writes SELECTION, TOKEN_FLOW and TOKEN_FLOW_BY_SITE sheets with a keep / exclude / check decision and its reason for every token, following the quality-control rules of the methodology. Manual decisions are read from `manual_overrides.csv`, which is never overwritten; `python -m modules.selection` re-applies the rule after you edit it, without re-measuring. Tested by `tests/test_selection.py`.
 
 ## Added on 1 November 2026: English or French
 

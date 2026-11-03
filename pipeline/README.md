@@ -198,6 +198,32 @@ python -m modules.run_all --folder data/wavs --out outputs --speakers metadata/p
 - **Codes:** `--speaker-fix TABLE_CODE=CORRECT_CODE` corrects a code in the table (e.g. `--speaker-fix 81acc1=81aac1`). `metadata/pfc_speaker_table_corrected.xlsx` already includes this correction.
 - **No speaker table:** the demographic columns stay empty and everything else is still computed.
 
+## Token selection (which tokens are analysed)
+
+Every run also decides, for every token, whether it is kept, and says why. The rules are the
+quality-control rules of the methodology; the thresholds are listed in PARAMETERS.
+
+| Decision | When |
+|---|---|
+| **Exclude** | (a) no F0 in the final syllable; (c) the final word group (*à Beaulieu*, *grand honneur*, *visites officielles*, *grand émoi*) is missing, repeated, or contains a hesitation or self-repair, because the nuclear configuration is realised on exactly that stretch |
+| **Check by listening** | (b) articulation rate below 2 syllables per second: the file may contain more than the sentence. Listen, then record Include or Exclude |
+| **Include** | everything else. Hesitations earlier in the sentence are noted but do not exclude the token |
+| **Include, FLAGGED = yes** | kept, but marked for the sensitivity analysis: F0 on less than half of the final vowel, an F0 jump of 7 ST or more, a final syllable over 600 ms, or a contour class that disagrees with the proposed boundary tone |
+| **Repair, then reassess** | no TextGrid, or the final-domain analysis failed |
+| **Pending – no data** | a speaker in the speaker table has no recording of that sentence (Q1–Q3, and S4 unless `--no-plan-s4`) |
+| **Pending – metadata** | the speaker is not in the speaker table |
+
+- **SELECTION sheet** (also `outputs/intonasphere_selection.csv`): the decision and reason for each token, with `COMPLETE_CASE_SET` (all three questions included) and `RQ4_SET` (S4 and at least one question included).
+- **TOKEN_FLOW** and **TOKEN_FLOW_BY_SITE** sheets: how many tokens were kept, flagged, excluded or are pending, by sentence and by site.
+- **Your decisions** go in `outputs/manual_overrides.csv` (columns `TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE`). It is created empty once and never overwritten. `MANUAL_DECISION` can be `Include`, `Exclude`, or e.g. `Not available` for an S4 that does not exist; it replaces the automatic decision.
+- **After editing the overrides file**, update the decisions without measuring anything again:
+
+```bash
+python -m modules.selection --results outputs/intonasphere_results.xlsx
+```
+
+The final-word-group check reads the word tier of the TextGrid, so it can only see hesitations that are transcribed. TextGrids made by WebMAUS from the PFC text contain the text, not what the reader said; `TRANSCRIPT_SOURCE` says which kind each token has.
+
 ## The separate commands still work
 
 | Command | Does |

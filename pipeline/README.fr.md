@@ -199,6 +199,31 @@ python -m modules.run_all --folder data/wavs --out outputs --speakers metadata/p
 - **Codes :** `--speaker-fix CODE_DU_TABLEAU=CODE_CORRECT` corrige un code du tableau (p. ex. `--speaker-fix 81acc1=81aac1`). `metadata/pfc_speaker_table_corrected.xlsx` contient déjà cette correction.
 - **Sans tableau des locuteurs :** les colonnes démographiques restent vides et tout le reste est quand même calculé.
 
+## Sélection des énoncés (quels énoncés sont analysés)
+
+Chaque exécution décide aussi, pour chaque énoncé, s'il est retenu, et indique pourquoi. Les règles sont celles du contrôle de qualité de la méthodologie ; les seuils figurent dans PARAMETERS. Les valeurs des décisions restent en anglais dans les données (`Include`, `Exclude`…), comme les noms de colonnes, pour que les exécutions en anglais et en français puissent être réunies.
+
+| Décision | Quand |
+|---|---|
+| **Exclude** (exclu) | (a) pas de F0 dans la syllabe finale ; (c) le groupe de mots final (*à Beaulieu*, *grand honneur*, *visites officielles*, *grand émoi*) manque, est répété ou contient une hésitation ou une autocorrection, car la configuration nucléaire se réalise précisément sur cette portion |
+| **Check by listening** (à écouter) | (b) débit d'articulation inférieur à 2 syllabes par seconde : le fichier contient peut-être plus que la phrase. Écoutez, puis notez Include ou Exclude |
+| **Include** (retenu) | tous les autres cas. Les hésitations plus tôt dans la phrase sont notées mais n'entraînent pas l'exclusion |
+| **Include, FLAGGED = yes** (retenu, signalé) | retenu, mais marqué pour l'analyse de sensibilité : F0 sur moins de la moitié de la voyelle finale, saut de F0 de 7 demi-tons ou plus, syllabe finale de plus de 600 ms, ou classe de contour en désaccord avec le ton de frontière proposé |
+| **Repair, then reassess** (à réparer) | pas de TextGrid, ou l'analyse du domaine final a échoué |
+| **Pending – no data** (en attente) | un locuteur de la table n'a pas d'enregistrement de cette phrase (Q1–Q3, et S4 sauf avec `--no-plan-s4`) |
+| **Pending – metadata** (en attente) | le locuteur n'est pas dans la table des locuteurs |
+
+- **Feuille SELECTION** (aussi `outputs/intonasphere_selection.csv`) : la décision et sa raison pour chaque énoncé, avec `COMPLETE_CASE_SET` (les trois questions retenues) et `RQ4_SET` (S4 et au moins une question retenus).
+- **Feuilles TOKEN_FLOW** et **TOKEN_FLOW_BY_SITE** : combien d'énoncés sont retenus, signalés, exclus ou en attente, par phrase et par site.
+- **Vos décisions** vont dans `outputs/manual_overrides.csv` (colonnes `TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE`). Il est créé vide une fois et n'est jamais écrasé. `MANUAL_DECISION` peut être `Include`, `Exclude` ou, par exemple, `Not available` pour un S4 qui n'existe pas ; il remplace la décision automatique.
+- **Après avoir modifié ce fichier**, mettez les décisions à jour sans refaire aucune mesure :
+
+```bash
+python -m modules.selection --results outputs/intonasphere_results.xlsx
+```
+
+Le contrôle du groupe de mots final lit le tier des mots du TextGrid : il ne voit donc que les hésitations transcrites. Les TextGrids produits par WebMAUS à partir du texte PFC contiennent le texte, et non ce que le lecteur a dit ; `TRANSCRIPT_SOURCE` indique de quel type est chaque énoncé.
+
 ## Les commandes séparées fonctionnent toujours
 
 | Commande | Rôle |
