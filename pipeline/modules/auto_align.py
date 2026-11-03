@@ -59,6 +59,7 @@ from scipy.io import wavfile
 
 from .final_domain_visualizer import (Interval, Tier, read_textgrid, write_textgrid, match_textgrid,
                                       PFC_QUESTIONS)
+from .i18n import t as tr, add_lang_option
 
 BAS = "https://clarin.phonetik.uni-muenchen.de/BASWebServices/services"
 PIPE_URL = f"{BAS}/runPipeline"
@@ -349,13 +350,14 @@ def ensure_alignments(folder: Path, align_dir: Path, mode: str = "any", language
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Give every WAV a WebMAUS TextGrid (existing TextGrids are kept)")
+    ap = argparse.ArgumentParser(description=tr('Give every WAV a WebMAUS TextGrid (existing TextGrids are kept)'))
+    add_lang_option(ap)
     ap.add_argument("--folder", required=True)
-    ap.add_argument("--out", default=None, help="alignment folder (default: <folder>/aligned)")
+    ap.add_argument("--out", default=None, help=tr('alignment folder (default: <folder>/aligned)'))
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="any")
     ap.add_argument("--language", default="fra-FR")
     ap.add_argument("--asr-model", default="small")
-    ap.add_argument("--realign", action="store_true", help="align every WAV with WebMAUS, ignoring existing TextGrids")
+    ap.add_argument("--realign", action="store_true", help=tr('align every WAV with WebMAUS, ignoring existing TextGrids'))
     a = ap.parse_args()
     out = user_path(a.out) if a.out else user_path(a.folder) / "aligned"
     res = ensure_alignments(user_path(a.folder), out, a.align, a.language, a.asr_model, realign=a.realign)

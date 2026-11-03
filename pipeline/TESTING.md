@@ -1,8 +1,12 @@
 # Testing IntonaSphere AI on your computer
 
+**English** | [Français](TESTING.fr.md)
+
 ## 1. Install (once)
 ```bash
 cd IntonasphereAI/pipeline
+python3 install.py               # asks English / Français, installs, runs the self-test
+# or by hand:
 pip install -r requirements.txt
 pip install faster-whisper        # only to test recordings that have no TextGrid and no .txt
 ```
@@ -39,7 +43,7 @@ python -m modules.selftest --folder test_data
 2. **WebMAUS TextGrids.** In Praat, open `synth_statement.wav` (or one of your own recordings without a TextGrid) together with its file in `outputs_selftest/run/aligned/`.
    - Are the word and syllable boundaries in the right places? (For the synthetic file they are approximate, since it is not real speech.)
    - Are the phones French?
-3. **F_ToBI checking.** Run `praat/check_ftobi.praat`.
+3. **F_ToBI checking.** Run `praat/check_ftobi.praat` (`check_ftobi_fr.praat` in French).
    - Proposals folder: `outputs_selftest/run/ftobi`
    - Audio folder: `test_data`
 

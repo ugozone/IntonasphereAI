@@ -1,4 +1,4 @@
-# IntonaSphere AI pipeline - version of 10 October 2026
+# IntonaSphere AI pipeline - version of 1 November 2026
 
 One package with everything; it replaces all earlier zips.
 
@@ -13,7 +13,18 @@ One package with everything; it replaces all earlier zips.
 | `python3 -m modules.segment_media --media film.mp4 --srt film.srt --out F` | Cuts a long recording (audio or video) into one WAV + .txt per phrase, ready for `run_all`. Times from a CSV, subtitles, a TextGrid, an IntonaSphere transcript, or speech recognition. |
 | `python3 -m modules.run_all ... --measure both` | Also measures the whole phrase (PHRASE_* columns: onset, offset, max, min, mean, range, change, slope), not only the final syllable. |
 | `python3 -m modules.coding_table --results R1 R2 --design d.csv --corrections c.csv --out t.xlsx` | Builds one coding table from one or more runs: study design + measures + semitone formulas, values to check in Praat in orange, hand corrections in blue and logged. `--design-by question` for PFC. |
-| Praat: `praat/verify_final_domain.praat`, `draw_final_domain.praat`, `draw_ftobi.praat`, `check_ftobi.praat` | Re-measure the values in Praat, draw both graphs in Praat, and correct the F_ToBI proposals. |
+| `python3 install.py [--lang en|fr] [--yes] [--with-asr]` | Installs everything in English or French, remembers the language for every command, runs the self-test. Any command takes `--lang en` or `--lang fr`. |
+| Praat: `praat/verify_final_domain.praat`, `draw_final_domain.praat`, `draw_ftobi.praat`, `check_ftobi.praat` (French: `*_fr.praat`) | Re-measure the values in Praat, draw both graphs in Praat, and correct the F_ToBI proposals. |
+
+## Added on 1 November 2026: English or French
+
+- **Installer:** `python3 install.py` asks *Language / Langue*, installs the packages (optionally faster-whisper), runs the self-test and shows the next commands, all in the chosen language. The choice is saved in `~/.intonasphere/config.json`.
+- **Every command in English or French:** messages, `--help`, reports and the README and CODEBOOK sheets of the workbook. Order of choice: `--lang`, then `INTONASPHERE_LANG`, then the saved choice, then the computer's language, then English.
+- **Data unchanged:** column names, sheet names, file names, option values and F_ToBI labels are identical in both languages, so runs can be pooled and earlier results stay comparable.
+- **French Praat scripts:** `praat/check_ftobi_fr.praat`, `draw_final_domain_fr.praat`, `draw_ftobi_fr.praat`, `verify_final_domain_fr.praat` (French forms and messages; same outputs).
+- **App:** a *Language / Langue* selector in the sidebar of the Streamlit app.
+- **French documentation:** `README.fr.md`, `TESTING.fr.md`, `PRAAT_VERIFICATION.fr.md`, `README_ftobi.fr.md`, `README_final_domain_visualizer.fr.md`, and the root `README.fr.md`.
+- **Translation checks:** `tools/check_translations.py` (pipeline) and `../tools/check_app_translations.py` (app); see `messages/README.md`. The GitHub tests run them, the French self-test and the installer.
 
 ## Added on 20 October 2026
 

@@ -1,5 +1,24 @@
 # IntonaSphere AI: prosodic cues and F_ToBI from French recordings
 
+**English** | [Français](README.fr.md)
+
+## Install, in English or French
+
+```bash
+cd ~/IntonasphereAI/pipeline
+python3 install.py            # Windows: python install.py
+```
+
+The installer first asks *Language / Langue* (1 English, 2 Français), then installs the packages, runs the self-test and shows the next commands, all in that language. The choice is remembered: every command then prints its messages, help and reports in that language, and writes the README and CODEBOOK sheets of the workbook in it.
+
+- Change the language for one command: add `--lang fr` or `--lang en` (e.g. `python3 -m modules.run_all --lang fr ...`).
+- Change it for good: `python3 install.py --lang en --no-pip --no-selftest --yes` (or `--lang fr`).
+- Other ways: the `INTONASPHERE_LANG` environment variable (`en` or `fr`); without any choice, a French-language computer gets French.
+- **Data never changes with the language.** Column names, sheet names, file names, option values and F_ToBI labels are the same in English and French, so results from both can be pooled and read by the same scripts.
+- French Praat scripts: `praat/*_fr.praat` (same scripts, French forms and messages).
+- Installer options: `--yes` (no questions), `--with-asr` (also faster-whisper), `--no-selftest`, `--no-pip`.
+
+
 **Testing first:** see TESTING.md (`python -m modules.selftest --folder test_data`).
 Checking values and drawing the graphs in Praat: see PRAAT_VERIFICATION.md.
 
@@ -215,5 +234,5 @@ Notes:
 
 ## Checking the results in Praat
 
-- **F_ToBI:** run `praat/check_ftobi.praat` on `outputs/ftobi`, correct each file and save it as `*_checked.TextGrid`. Then run `validate_ftobi`.
+- **F_ToBI:** run `praat/check_ftobi.praat` (French: `praat/check_ftobi_fr.praat`) on `outputs/ftobi`, correct each file and save it as `*_checked.TextGrid`. Then run `validate_ftobi`.
 - **Final-domain cues:** open `x.wav` together with `outputs/final_domain/x_cues.TextGrid`. The CUES tier marks every measured point with its time and value.

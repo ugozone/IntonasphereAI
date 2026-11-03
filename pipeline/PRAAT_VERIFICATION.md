@@ -1,6 +1,8 @@
 # Checking the acoustic values and drawing the graphs in Praat
 
-All scripts are in the `praat/` folder. Run each one from Praat with **Praat → Open Praat script… → Run → Run**.
+**English** | [Français](PRAAT_VERIFICATION.fr.md)
+
+All scripts are in the `praat/` folder. Each has a French twin, `x_fr.praat`, with French forms and messages; both produce the same files. Run each one from Praat with **Praat → Open Praat script… → Run → Run**.
 When the form asks for a folder, give its full path: drag the folder from Finder into Terminal and copy the text that appears.
 If Praat asks for permission to save a file, allow it.
 

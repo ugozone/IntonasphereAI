@@ -63,6 +63,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
+from .i18n import t as tr, add_lang_option
 
 RESULTS_NAME = "intonasphere_results.xlsx"
 
@@ -101,10 +102,10 @@ def _results_file(p: Path) -> Path:
     if p.is_dir():
         f = p / RESULTS_NAME
         if not f.exists():
-            raise SystemExit(f"No {RESULTS_NAME} in {p}. Point --results at a run_all --out folder.")
+            raise SystemExit(tr('No {results_name} in {p}. Point --results at a run_all --out folder.', results_name=RESULTS_NAME, p=p))
         return f
     if not p.exists():
-        raise SystemExit(f"Results file not found: {p}")
+        raise SystemExit(tr('Results file not found: {p}', p=p))
     return p
 
 
@@ -332,7 +333,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
     runs = pd.concat([read_run(s) for s in results], ignore_index=True)
     dup = runs["TOKEN_ID"].astype(str)[runs["TOKEN_ID"].astype(str).duplicated()].unique().tolist()
     if dup:
-        print("Warning: the same recording appears in more than one run; the LAST one is used:", ", ".join(dup))
+        print(tr('Warning: the same recording appears in more than one run; the LAST one is used:'), ", ".join(dup))
     runs = runs.drop_duplicates("TOKEN_ID", keep="last")
     by_tid = {str(r["TOKEN_ID"]): r for r in runs.to_dict("records")}
     tids = list(by_tid)
@@ -343,7 +344,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
         dz = pd.read_csv(user_path(design), dtype=str, keep_default_na=False, encoding=CSV_ENCODING)
         qcol = next((c for c in dz.columns if c.strip().lower() in ("question", "sentence_id", "id")), None)
         if qcol is None:
-            raise SystemExit("With --design-by question the design file needs a column 'question' (Q1, Q2, ... or 1, 2, ...).")
+            raise SystemExit(tr("With --design-by question the design file needs a column 'question' (Q1, Q2, ... or 1, 2, ...)."))
         dz = dz.rename(columns={qcol: "Question"})
         spk_col = None
         design_cols = ["ID"] + list(dz.columns)
@@ -361,7 +362,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
             dz = pd.read_csv(user_path(design), dtype=str, keep_default_na=False, encoding=CSV_ENCODING)
             idcol = next((c for c in dz.columns if c.strip().lower() == "id"), None)
             if idcol is None:
-                raise SystemExit("The design file needs a column called 'id'.")
+                raise SystemExit(tr("The design file needs a column called 'id'."))
             dz = dz.rename(columns={idcol: "ID"})
         else:
             dz = pd.DataFrame({"ID": tids})
@@ -438,7 +439,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
         cz.columns = [c.strip().lower() for c in cz.columns]
         for need in ("id", "column", "value"):
             if need not in cz.columns:
-                raise SystemExit(f"The corrections file needs the columns id, column, value (and note). Missing: {need}")
+                raise SystemExit(tr('The corrections file needs the columns id, column, value (and note). Missing: {need}', need=need))
         for _, c in cz.iterrows():
             h = c["column"].strip()
             n = rowmap.get(c["id"].strip())
@@ -446,7 +447,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
                 t = _match(c["id"], [str(k) for k in rowmap])
                 n = rowmap.get(t) if t else None
             if n is None or h not in col:
-                print(f"Correction skipped (unknown id or column): {c['id']} / {h}")
+                print(tr('Correction skipped (unknown id or column): {id} / {h}', id=c['id'], h=h))
                 continue
             cell = ws[f"{col[h]}{n}"]
             old = cell.value
@@ -493,17 +494,17 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
     # legend
     lg = wb.create_sheet("Legend")
     lines = [
-        ("How this table was made", f"python -m modules.coding_table, {_dt.date.today().isoformat()}. Rebuild it the same way after every rerun; hand values come back from the corrections file."),
-        ("Orange cell", "Check in Praat. The reason is in the cell's comment and in 'QC flags'. A flag is a request to look, not a verdict."),
-        ("Blue cell", "Hand-corrected value from the corrections file (old value in the comment and in CORRECTIONS)."),
-        ("Yellow cell", "For you to fill in (Matches expected?)."),
-        ("Grey cells", "Formulas: range in Hz, range in semitones = 12 x log2(max/min), offset minus onset in semitones (positive = ends higher). Do not type in them."),
-        ("Measure domain", "Whole phrase = first to last voiced frame of the phrase (run_all --measure both). Final syllable only = run without --measure both."),
-        ("F0 final syllable (Hz)", "Mean F0 of the final syllable."),
-        ("Pitch range (Hz)", "Floor-ceiling used for that run (PARAMETERS sheet of the run)."),
-        ("Thresholds", f"Octave error: value >= {DOUBLING_RATIO} x or <= 1/{DOUBLING_RATIO} of the file median. Edge: within {EDGE_ST} ST of floor/ceiling. Short final syllable: < {SHORT_FINAL_S * 1000:.0f} ms. Low final-vowel F0: < {LOW_COVERAGE:.0%} coverage."),
+        (tr('How this table was made'), tr('python -m modules.coding_table, {isoformat}. Rebuild it the same way after every rerun; hand values come back from the corrections file.', isoformat=_dt.date.today().isoformat())),
+        (tr('Orange cell'), tr("Check in Praat. The reason is in the cell's comment and in 'QC flags'. A flag is a request to look, not a verdict.")),
+        (tr('Blue cell'), tr('Hand-corrected value from the corrections file (old value in the comment and in CORRECTIONS).')),
+        (tr('Yellow cell'), tr('For you to fill in (Matches expected?).')),
+        (tr('Grey cells'), tr('Formulas: range in Hz, range in semitones = 12 x log2(max/min), offset minus onset in semitones (positive = ends higher). Do not type in them.')),
+        (tr('Measure domain'), tr('Whole phrase = first to last voiced frame of the phrase (run_all --measure both). Final syllable only = run without --measure both.')),
+        (tr('F0 final syllable (Hz)'), tr('Mean F0 of the final syllable.')),
+        (tr('Pitch range (Hz)'), tr('Floor-ceiling used for that run (PARAMETERS sheet of the run).')),
+        (tr('Thresholds'), tr('Octave error: value >= {doubling_ratio} x or <= 1/{doubling_ratio} of the file median. Edge: within {edge_st} ST of floor/ceiling. Short final syllable: < {value:.0f} ms. Low final-vowel F0: < {low_coverage:.0%} coverage.', doubling_ratio=DOUBLING_RATIO, edge_st=EDGE_ST, value=SHORT_FINAL_S * 1000, low_coverage=LOW_COVERAGE)),
     ]
-    lg["A1"], lg["A1"].font = "How to read this table", bold
+    lg["A1"], lg["A1"].font = tr("How to read this table"), bold
     for i, (a, b) in enumerate(lines, 3):
         lg[f"A{i}"], lg[f"B{i}"] = a, b
         lg[f"A{i}"].font = bold
@@ -525,7 +526,7 @@ def build(results: List[str], out: Path, design: Optional[Path] = None,
 
     out.parent.mkdir(parents=True, exist_ok=True)
     wb.save(out)
-    print(f"Coding table: {out}  ({len(table)} rows, {len(log)} hand corrections)")
+    print(tr('Coding table: {out}  ({n_table} rows, {n_log} hand corrections)', out=out, n_table=len(table), n_log=len(log)))
     return out
 
 
@@ -542,7 +543,7 @@ def make_design(results: List[str], out: Path, design_by: str = "token") -> Path
                            for _, sid, qt, st in qs])
         out.parent.mkdir(parents=True, exist_ok=True)
         df.to_csv(out, index=False, encoding=CSV_ENCODING)
-        print(f"Design file to fill in: {out}  ({len(df)} questions over {len(runs)} recordings). Keep 'question'.")
+        print(tr("Design file to fill in: {out}  ({n_df} questions over {n_runs} recordings). Keep 'question'.", out=out, n_df=len(df), n_runs=len(runs)))
         return out
     cols = ["id", "speaker", "set", "comparison", "phrase", "gloss", "pragmatic function", "expected contour"]
     rows = []
@@ -551,24 +552,24 @@ def make_design(results: List[str], out: Path, design_by: str = "token") -> Path
                      "phrase": "", "gloss": "", "pragmatic function": "", "expected contour": ""})
     out.parent.mkdir(parents=True, exist_ok=True)
     pd.DataFrame(rows, columns=cols).to_csv(out, index=False, encoding=CSV_ENCODING)
-    print(f"Design file to fill in: {out}  ({len(rows)} recordings). Add, rename or delete columns freely; keep 'id'.")
+    print(tr("Design file to fill in: {out}  ({n_rows} recordings). Add, rename or delete columns freely; keep 'id'.", out=out, n_rows=len(rows)))
     return out
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Build a corpus coding table from run_all results.")
+    ap = argparse.ArgumentParser(description=tr('Build a corpus coding table from run_all results.'))
+    add_lang_option(ap)
     ap.add_argument("--results", nargs="+", required=True,
-                    help="results files or folders; Label=path names the speaker/group of that run")
-    ap.add_argument("--design", help="CSV with an 'id' column + your study columns")
-    ap.add_argument("--corrections", help="CSV: id, column, value, note (hand values from Praat)")
-    ap.add_argument("--out", help="output .xlsx (default: coding_table.xlsx next to the first results file)")
-    ap.add_argument("--only-design", action="store_true", help="leave out recordings that are not in the design file")
-    ap.add_argument("--make-design", metavar="CSV", help="write a design file to fill in, then stop")
+                    help=tr('results files or folders; Label=path names the speaker/group of that run'))
+    ap.add_argument("--design", help=tr("CSV with an 'id' column + your study columns"))
+    ap.add_argument("--corrections", help=tr('CSV: id, column, value, note (hand values from Praat)'))
+    ap.add_argument("--out", help=tr('output .xlsx (default: coding_table.xlsx next to the first results file)'))
+    ap.add_argument("--only-design", action="store_true", help=tr('leave out recordings that are not in the design file'))
+    ap.add_argument("--make-design", metavar="CSV", help=tr('write a design file to fill in, then stop'))
     ap.add_argument("--design-by", choices=["token", "question"], default="token",
-                    help="token: one design row per recording (default); question: one row per question "
-                         "(Q1, Q2, ...) that fills in every speaker's recording of it (PFC)")
+                    help=tr("token: one design row per recording (default); question: one row per question (Q1, Q2, ...) that fills in every speaker's recording of it (PFC)"))
     ap.add_argument("--no-corpus-info", action="store_true",
-                    help="leave out the speaker-table columns (site, country, age group, sex, question type...)")
+                    help=tr('leave out the speaker-table columns (site, country, age group, sex, question type...)'))
     a = ap.parse_args()
     if a.make_design:
         make_design(a.results, user_path(a.make_design), a.design_by)

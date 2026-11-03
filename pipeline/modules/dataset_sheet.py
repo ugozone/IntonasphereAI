@@ -31,6 +31,7 @@ import numpy as np
 import pandas as pd
 
 from .final_domain_visualizer import read_textgrid, track_intensity, PFC_QUESTIONS, sentence_id
+from .i18n import t as tr
 
 DATASET_COLUMNS = [
     "TOKEN_ID", "SPEAKER_ID", "SITE_ID", "COUNTRY", "CONTINENT", "REGION_GROUP", "AGE", "AGE_GROUP", "SEX",
@@ -293,4 +294,4 @@ def dataset_row(wav: Path, textgrid: Optional[Path], wav_x, sr, pitch, fd: Dict,
 
 
 def codebook_df() -> pd.DataFrame:
-    return pd.DataFrame(CODEBOOK, columns=["COLUMN", "DEFINITION", "UNIT", "SOURCE"])
+    return pd.DataFrame([(c, tr(d), u, tr(src)) for c, d, u, src in CODEBOOK], columns=["COLUMN", "DEFINITION", "UNIT", "SOURCE"])

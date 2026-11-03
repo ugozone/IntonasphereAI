@@ -52,6 +52,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
+from .i18n import t as tr, add_lang_option
 
 try:  # Praat itself, when available
     import parselmouth  # type: ignore
@@ -1076,7 +1077,7 @@ def run_folder(folder: str | Path, out: str | Path, **kw) -> pd.DataFrame:
     rows = []
     for i, w in enumerate(wavs, 1):
         tg = match_textgrid(w, all_tgs)
-        print(f"[{i}/{len(wavs)}] {w.name}  textgrid: {tg.name if tg else 'none -> automatic'}")
+        print(tr('[{i}/{n_wavs}] {name}  textgrid: {value}', i=i, n_wavs=len(wavs), name=w.name, value=tg.name if tg else 'none -> automatic'))
         try:
             rows.append(process_token(w, tg, out, **kw))
         except Exception as e:  # keep going; the row records the failure
@@ -1095,22 +1096,23 @@ def run_folder(folder: str | Path, out: str | Path, **kw) -> pd.DataFrame:
     write_praat_check(df, out)
     with pd.ExcelWriter(out / "final_domain_cues.xlsx", engine="openpyxl") as xw:
         df.to_excel(xw, sheet_name="FINAL_DOMAIN_CUES", index=False)
-    print(f"\nDone: {len(df)} tokens -> {out}")
+    print(tr('\nDone: {n_df} tokens -> {out}', n_df=len(df), out=out))
     return df
 
 
 def main():
-    ap = argparse.ArgumentParser(description="IntonaSphere AI final-domain visualizer")
-    ap.add_argument("--folder", required=True, help="Folder with .wav (and optional same-name .TextGrid) files")
+    ap = argparse.ArgumentParser(description=tr('IntonaSphere AI final-domain visualizer'))
+    add_lang_option(ap)
+    ap.add_argument("--folder", required=True, help=tr('Folder with .wav (and optional same-name .TextGrid) files'))
     ap.add_argument("--out", default="outputs/final_domain")
-    ap.add_argument("--tier", default="MAS", help="Syllable tier in the WebMAUS TextGrid")
-    ap.add_argument("--force-auto", action="store_true", help="Ignore TextGrids; segment automatically")
-    ap.add_argument("--slope-threshold", type=float, default=1.5, help="ST/s boundary for rise/fall vs plateau")
+    ap.add_argument("--tier", default="MAS", help=tr('Syllable tier in the WebMAUS TextGrid'))
+    ap.add_argument("--force-auto", action="store_true", help=tr('Ignore TextGrids; segment automatically'))
+    ap.add_argument("--slope-threshold", type=float, default=1.5, help=tr('ST/s boundary for rise/fall vs plateau'))
     ap.add_argument("--pitch-range", nargs=2, type=float, metavar=("FLOOR", "CEILING"),
-                    help="Fixed pitch range in Hz instead of the speaker-adaptive two-pass range")
-    ap.add_argument("--svg", action="store_true", help="Also save each figure as SVG")
+                    help=tr('Fixed pitch range in Hz instead of the speaker-adaptive two-pass range'))
+    ap.add_argument("--svg", action="store_true", help=tr('Also save each figure as SVG'))
     ap.add_argument("--measure", choices=MEASURE_DOMAINS, default="final",
-                    help="final = final-syllable cues only (default); both = also onset/max/min/offset/range over the whole phrase")
+                    help=tr('final = final-syllable cues only (default); both = also onset/max/min/offset/range over the whole phrase'))
     a = ap.parse_args()
     run_folder(user_path(a.folder), user_path(a.out), tier=a.tier, force_auto=a.force_auto, slope_threshold=a.slope_threshold,
                fixed_range=tuple(a.pitch_range) if a.pitch_range else None, svg=a.svg, measure_domain=a.measure)

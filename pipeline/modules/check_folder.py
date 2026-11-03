@@ -28,6 +28,7 @@ import pandas as pd
 from scipy.io import wavfile
 
 from .final_domain_visualizer import read_textgrid, match_textgrid, PFC_QUESTIONS, sentence_id
+from .i18n import t as tr, add_lang_option
 
 PFC_NAME = re.compile(r"^(.+?)tw([1-4])$", re.I)
 NON_FRENCH = {"I", "aU", "aI", "OY", "?", "e:", "i:", "a:", "o:", "u:", "y:", "2:", "E:", "OE", "U", "Y", "6", "C", "Q", "V", "T", "D", "{"}
@@ -200,7 +201,7 @@ def apply_fixes(folder: Path, acts: List[Dict], log_path: Path) -> int:
 
 def undo_fixes(folder: Path, log_path: Path) -> int:
     if not log_path.exists():
-        print("No fix log found: nothing to undo."); return 0
+        print(tr('No fix log found: nothing to undo.')); return 0
     log = pd.read_csv(log_path, encoding=CSV_ENCODING)
     n = 0
     for _, a_ in log[log.RESULT == "done"].iloc[::-1].iterrows():
@@ -208,22 +209,23 @@ def undo_fixes(folder: Path, log_path: Path) -> int:
         if src.exists() and (not dst.exists() or _same_file(src, dst)):
             _rename(src, dst); n += 1
     log_path.replace(log_path.with_suffix(".undone.csv"))      # replace(): also works on Windows if it exists
-    print(f"Undid {n} change(s).")
+    print(tr('Undid {n} change(s).', n=n))
     return n
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Check a data folder before running IntonaSphere")
+    ap = argparse.ArgumentParser(description=tr('Check a data folder before running IntonaSphere'))
+    add_lang_option(ap)
     ap.add_argument("--folder", required=True)
     ap.add_argument("--speakers", default=None)
     ap.add_argument("--speaker-fix", action="append", default=[], metavar="TABLE_CODE=CORRECT_CODE")
     ap.add_argument("--align", choices=["none", "pfc", "any"], default="pfc",
-                    help="the alignment mode you plan to use (only changes the 'pipeline will' column)")
-    ap.add_argument("--out", default=None, help="where to write the report (default: next to the folder)")
+                    help=tr("the alignment mode you plan to use (only changes the 'pipeline will' column)"))
+    ap.add_argument("--out", default=None, help=tr('where to write the report (default: next to the folder)'))
     ap.add_argument("--fix", action="store_true",
-                    help="propose safe fixes (renames, set-asides); add --apply to carry them out")
-    ap.add_argument("--apply", action="store_true", help="with --fix: carry out the proposed fixes")
-    ap.add_argument("--undo", action="store_true", help="reverse the fixes recorded in folder_fix_log.csv")
+                    help=tr('propose safe fixes (renames, set-asides); add --apply to carry them out'))
+    ap.add_argument("--apply", action="store_true", help=tr('with --fix: carry out the proposed fixes'))
+    ap.add_argument("--undo", action="store_true", help=tr('reverse the fixes recorded in folder_fix_log.csv'))
     a = ap.parse_args()
     if a.undo:
         f_ = user_path(a.folder)
@@ -301,58 +303,58 @@ def main():
     sdf = pd.DataFrame(sp_rows)
 
     # report
-    L = [f"IntonaSphere folder check: {folder}",
-         f"{len(wavs)} WAV, {len(tgs)} TextGrid, {len(txts)} txt" + (f", other files: {', '.join(others[:8])}" if others else ""), ""]
+    L = [tr('IntonaSphere folder check: {folder}', folder=folder),
+         tr('{n_wavs} WAV, {n_tgs} TextGrid, {n_txts} txt', n_wavs=len(wavs), n_tgs=len(tgs), n_txts=len(txts)) + (tr(', other files: {join}', join=', '.join(others[:8])) if others else ""), ""]
     n_q = df.SENTENCE.value_counts().to_dict() if len(df) else {}
-    L.append("Recordings per sentence: " + ", ".join(f"{k}: {v}" for k, v in sorted(n_q.items())))
+    L.append(tr('Recordings per sentence: ') + ", ".join(f"{k}: {v}" for k, v in sorted(n_q.items())))
     if len(sdf):
         rec = sdf[sdf.get("IN_SPEAKER_TABLE", pd.Series(["yes"] * len(sdf))).astype(str).str.startswith(("yes", "NO"))] \
             if "IN_SPEAKER_TABLE" in sdf else sdf
         full = int(rec.ALL_3_QUESTIONS.sum())
-        L.append(f"Speakers with recordings: {len(rec)}; with all three questions (Q1-Q3): {full}")
+        L.append(tr('Speakers with recordings: {n_rec}; with all three questions (Q1-Q3): {full}', n_rec=len(rec), full=full))
     probs = df[(~df.get("WAV_OK", True).astype(bool)) | (df.get("TG_OK", True).fillna(True) == False)] if len(df) else df
-    L += ["", f"PROBLEMS TO FIX BEFORE PROCESSING ({len(probs)} file(s)):"]
+    L += ["", tr('PROBLEMS TO FIX BEFORE PROCESSING ({n_probs} file(s)):', n_probs=len(probs))]
     for _, r in probs.iterrows():
         wp = r.get("WAV_PROBLEM") if isinstance(r.get("WAV_PROBLEM"), str) and not r.get("WAV_OK", True) else ""
         tp = r.get("TG_PROBLEM") if isinstance(r.get("TG_PROBLEM"), str) else ""
         L.append(f"  {r.AUDIO_FILE}: {wp} {tp}".replace("  ", " ").rstrip())
     if orphans:
-        L.append(f"  TextGrids with no matching WAV: {', '.join(orphans)}")
+        L.append(tr('  TextGrids with no matching WAV: {join}', join=', '.join(orphans)))
     if len(sdf) and "IN_SPEAKER_TABLE" in sdf:
         miss = sdf[sdf.IN_SPEAKER_TABLE.astype(str).str.startswith("NO")]
         for _, r in miss.iterrows():
-            L.append(f"  speaker {r.SPEAKER}: not in the speaker table {r.IN_SPEAKER_TABLE[2:]}")
+            L.append(tr('  speaker {speaker}: not in the speaker table {value}', speaker=r.SPEAKER, value=r.IN_SPEAKER_TABLE[2:]))
     if len(probs) == 0 and not orphans and not (len(sdf) and "IN_SPEAKER_TABLE" in sdf and
                                                  sdf.IN_SPEAKER_TABLE.astype(str).str.startswith("NO").any()):
-        L.append("  none")
+        L.append(tr('  none'))
     low = df[df.get("WAV_PROBLEM", pd.Series([""] * len(df))).fillna("").str.contains("low recording level")] if len(df) else df
     if len(low):
-        L += ["", f"Low recording level ({len(low)} file(s)) - usable, no action needed; intensity values are lower: "
+        L += ["", tr('Low recording level ({n_low} file(s)) - usable, no action needed; intensity values are lower: ', n_low=len(low))
               + ", ".join(low.AUDIO_FILE.head(30))]
     multi = df[df.OTHER_TEXTGRID_VERSIONS.astype(str) != ""] if len(df) else df
     if len(multi):
-        L += ["", "Several TextGrid versions for one WAV (the one used is shown; move the others out):"]
-        L += [f"  {r.AUDIO_FILE}: uses {r.TEXTGRID_USED}; also {r.OTHER_TEXTGRID_VERSIONS}" for _, r in multi.iterrows()]
+        L += ["", tr('Several TextGrid versions for one WAV (the one used is shown; move the others out):')]
+        L += [tr('  {audio_file}: uses {textgrid_used}; also {other_textgrid_versions}', audio_file=r.AUDIO_FILE, textgrid_used=r.TEXTGRID_USED, other_textgrid_versions=r.OTHER_TEXTGRID_VERSIONS) for _, r in multi.iterrows()]
     notes = df[df.get("TG_NOTE", pd.Series([""] * len(df))).fillna("") != ""] if len(df) else df
     if len(notes):
-        L += ["", f"Notes (no action needed unless unexpected) - {len(notes)} file(s), details in folder_check.xlsx"]
+        L += ["", tr('Notes (no action needed unless unexpected) - {n_notes} file(s), details in folder_check.xlsx', n_notes=len(notes))]
     plan = df.PIPELINE_WILL.str.replace(r"\s+\(PROBLEM.*", "", regex=True).value_counts().to_dict() if len(df) else {}
     L += ["", f"What the pipeline will do (--align {a.align}):"] + [f"  {v:4d}  {k}" for k, v in plan.items()]
     if table is not None:
         only = sdf[sdf.IN_SPEAKER_TABLE.astype(str).str.startswith("table only")]
         if len(only):
-            L += ["", f"In the speaker table but no recordings in this folder: {', '.join(only.SPEAKER)}"]
+            L += ["", tr('In the speaker table but no recordings in this folder: {join}', join=', '.join(only.SPEAKER))]
     if a.fix:
         acts = plan_fixes(folder, df, tgs, wavs, orphans)
-        L += ["", f"PROPOSED FIXES ({len(acts)}) - nothing is deleted; moved files go to {folder.name}/{ASIDE}/:"]
+        L += ["", tr('PROPOSED FIXES ({n_acts}) - nothing is deleted; moved files go to {name}/{aside}/:', n_acts=len(acts), name=folder.name, aside=ASIDE)]
         L += [f"  {x['ACTION']:9s} {x['FROM']}  ->  {x['TO']}    ({x['WHY']})" for x in acts] or ["  none"]
-        L.append("  Not fixed automatically: speaker codes missing from the speaker table (decide by hand).")
+        L.append(tr('  Not fixed automatically: speaker codes missing from the speaker table (decide by hand).'))
         if a.apply and acts:
             n = apply_fixes(folder, acts, folder / "folder_fix_log.csv")
-            L += ["", f"APPLIED {n} fix(es). Log: {folder / 'folder_fix_log.csv'}  (undo: add --undo)",
-                  "Run the check again (without --fix) to confirm the folder is clean."]
+            L += ["", tr('APPLIED {n} fix(es). Log: {value}  (undo: add --undo)', n=n, value=folder / 'folder_fix_log.csv'),
+                  tr('Run the check again (without --fix) to confirm the folder is clean.')]
         elif acts:
-            L += ["", "Nothing changed yet. To carry these out, run the same command with --fix --apply"]
+            L += ["", tr('Nothing changed yet. To carry these out, run the same command with --fix --apply')]
     txt = "\n".join(L)
     print(txt)
     out.mkdir(parents=True, exist_ok=True)
@@ -361,7 +363,7 @@ def main():
         pd.DataFrame({"REPORT": L}).to_excel(xw, sheet_name="SUMMARY", index=False)
         df.to_excel(xw, sheet_name="FILES", index=False)
         sdf.to_excel(xw, sheet_name="SPEAKERS", index=False)
-    print(f"\nReport: {out / 'folder_check_report.txt'}   Details: {out / 'folder_check.xlsx'}")
+    print(tr('\nReport: {value}   Details: {value2}', value=out / 'folder_check_report.txt', value2=out / 'folder_check.xlsx'))
 
 
 if __name__ == "__main__":
