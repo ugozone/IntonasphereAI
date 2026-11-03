@@ -787,10 +787,17 @@ def process_token_level_workbook(
     preferred_tier: str = "MAS",
     pitch_floor: float = 75.0,
     pitch_ceiling: float = 500.0,
+    build_master_sheet: bool = True,
+    overrides_path: Optional[str] = None,
 ):
     """
     Process all sheets whose names begin with Token_Level_Data.
     Keep all other sheets unchanged.
+
+    If the template workbook contains a 'combined speaker table' sheet and
+    build_master_sheet is True, also write <output>_MASTER.xlsx (speaker metadata,
+    QC flags, token-selection decisions) and <output>_MASTER_token_flow.csv
+    next to the outputs. See modules/master_sheet.py and docs/master_sheet.md.
     """
     workbook = pd.read_excel(template_path, sheet_name=None)
 
@@ -891,6 +898,25 @@ def process_token_level_workbook(
     print(f"Total concatenated rows: {len(combined_df)}")
     print(f"Total variables/columns: {len(combined_df.columns)}")
 
+    if build_master_sheet and not combined_df.empty:
+        try:
+            from modules.master_sheet import build_and_save, has_speaker_table
+
+            if has_speaker_table(template_path):
+                master_xlsx = Path(output_xlsx).with_name(Path(output_xlsx).stem + "_MASTER.xlsx")
+                _, flow = build_and_save(
+                    combined_df,
+                    template_path,
+                    master_xlsx,
+                    overrides_path=overrides_path,
+                )
+                print(f"Master sheet (metadata + QC + selection): {master_xlsx}")
+                print(flow.to_string(index=False))
+            else:
+                print("No 'combined speaker table' sheet in the template; master sheet skipped.")
+        except Exception as e:  # never let the master sheet break the extraction itself
+            print(f"WARNING: master sheet not built: {e}")
+
     return combined_df
 
 
@@ -953,6 +979,19 @@ def main():
         help="Praat pitch ceiling in Hz.",
     )
 
+    parser.add_argument(
+        "--overrides",
+        default=None,
+        help="CSV of manual token decisions (TOKEN_ID, PITCH_TRACK_CHECKED, MANUAL_DECISION, MANUAL_NOTE). "
+             "Default: manual_overrides.csv next to the output, created if missing.",
+    )
+
+    parser.add_argument(
+        "--no_master",
+        action="store_true",
+        help="Do not build the PFC Q1–Q3 master sheet after extraction.",
+    )
+
     args = parser.parse_args()
 
     os.makedirs(Path(args.output_xlsx).parent, exist_ok=True)
@@ -967,6 +1006,8 @@ def main():
         preferred_tier=args.tier,
         pitch_floor=args.pitch_floor,
         pitch_ceiling=args.pitch_ceiling,
+        build_master_sheet=not args.no_master,
+        overrides_path=args.overrides,
     )
 
 

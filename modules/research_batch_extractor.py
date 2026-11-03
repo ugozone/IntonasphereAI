@@ -32,6 +32,8 @@ def run_pfc_token_level_extraction(
     preferred_tier: str = "MAS",
     pitch_floor: float = 75.0,
     pitch_ceiling: float = 500.0,
+    build_master_sheet: bool = True,
+    overrides_path: str = None,
 ) -> pd.DataFrame:
     """
     Run token-level acoustic and prosodic extraction for PFC-style data.
@@ -59,6 +61,11 @@ def run_pfc_token_level_extraction(
         Praat pitch floor. Default is 75 Hz.
     pitch_ceiling:
         Praat pitch ceiling. Default is 500 Hz.
+    build_master_sheet:
+        Also write PFC_Q1_Q2_Q3_master.xlsx (speaker metadata, QC flags,
+        token-selection decisions) when the template has a speaker table.
+    overrides_path:
+        Optional CSV of manual token decisions; see modules/master_sheet.py.
 
     Returns
     -------
@@ -85,6 +92,8 @@ def run_pfc_token_level_extraction(
         preferred_tier=preferred_tier,
         pitch_floor=float(pitch_floor),
         pitch_ceiling=float(pitch_ceiling),
+        build_master_sheet=build_master_sheet,
+        overrides_path=overrides_path,
     )
 
     if not isinstance(df, pd.DataFrame):

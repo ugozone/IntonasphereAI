@@ -2615,6 +2615,22 @@ with st.expander("Configure PFC batch extraction", expanded=False):
                             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         )
 
+                    master_xlsx_path = tier_output_xlsx.with_name(tier_output_xlsx.stem + "_MASTER.xlsx")
+                    if master_xlsx_path.exists():
+                        st.info(
+                            "Master sheet built: speaker metadata, QC flags and token-selection "
+                            "decisions. Record manual pitch-track checks in manual_overrides.csv "
+                            "in the same folder; they are kept on every re-run."
+                        )
+                        with open(master_xlsx_path, "rb") as f:
+                            st.download_button(
+                                label=f"Download {tier_name} master sheet",
+                                data=f,
+                                file_name=master_xlsx_path.name,
+                                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                key=f"master_{tier_label}",
+                            )
+
         except Exception as e:
             st.error("Extraction failed.")
             st.exception(e)

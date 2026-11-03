@@ -56,6 +56,13 @@ No recordings or corpus metadata are included: the self-test makes its own synth
 
 See [`pipeline/README.md`](pipeline/README.md) for every option (`--realign`, `compare_runs`, `check_folder`), [`pipeline/PRAAT_VERIFICATION.md`](pipeline/PRAAT_VERIFICATION.md) for checking the values in Praat, and [`pipeline/VERSION.md`](pipeline/VERSION.md) for what this version includes.
 
+## PFC master sheet
+
+Token-level PFC extraction now also writes a master sheet with speaker metadata,
+quality-control flags and token-selection decisions, plus a token-flow table.
+Manual decisions are kept in `manual_overrides.csv` across re-runs.
+See [`docs/master_sheet.md`](docs/master_sheet.md).
+
 ## How to cite
 
 **Author:** Jamike Ugochukwu Okoroji, Department of Modern Languages and Classics, Barefield College of Arts and Sciences, The University of Alabama, Tuscaloosa, Alabama, USA.
