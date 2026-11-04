@@ -110,6 +110,20 @@ def asr_text(wav: Path, model_size: str = "small") -> str:
     return " ".join(s.text.strip() for s in segs).strip()
 
 
+def known_text(wav: Path) -> Tuple[str, str]:
+    """The text that would be used without speech recognition: your .txt, else the PFC sentence."""
+    for cand in (wav.with_suffix(".txt"), wav.with_suffix(".TXT")):
+        if cand.exists():
+            return read_txt(cand), "user_txt"
+    t = pfc_text(wav)
+    return (t, "pfc_texte_lu") if t else ("", "")
+
+
+def _same_text(a: str, b: str) -> bool:
+    norm = lambda x: " ".join(re.sub(r"[^\w']+", " ", x.lower()).split())
+    return norm(a) == norm(b)
+
+
 def get_text(wav: Path, mode: str, asr_model: str) -> Tuple[str, str]:
     """Priority: x.txt written by the user > PFC question > speech recognition."""
     for cand in (wav.with_suffix(".txt"), wav.with_suffix(".TXT")):
@@ -315,8 +329,15 @@ def ensure_alignments(folder: Path, align_dir: Path, mode: str = "any", language
             continue
         cached = align_dir / f"{w.stem}.TextGrid"
         if cached.exists():
-            results.append(AlignResult(w, cached, alignment_source="webmaus (cached)", status="ok", user_textgrid=tg))
-            continue
+            used_txt = align_dir / f"{w.stem}.txt"          # the text WebMAUS was given for this alignment
+            used = read_txt(used_txt) if used_txt.exists() else ""
+            cur, cur_src = known_text(w)
+            if cur_src == "user_txt" and used and _same_text(used, cur) is False and mode != "none":
+                log(f"  {w.name}: your .txt changed since it was aligned -> aligning again")
+            else:
+                src = (f"{cur_src} (cached)" if used and cur and _same_text(used, cur) else "")
+                results.append(AlignResult(w, cached, used, src, "webmaus (cached)", "ok", user_textgrid=tg))
+                continue
         if mode == "none":
             results.append(AlignResult(w, None, status="skipped", message="no TextGrid (alignment off)"))
             continue

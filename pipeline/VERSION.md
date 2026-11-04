@@ -20,6 +20,8 @@ One package with everything; it replaces all earlier zips.
 
 ## Added on 3 November 2026
 
+- **Cached alignments:** a TextGrid reused from `aligned/` now records which text it was made from (`user_txt (cached)` or `pfc_texte_lu (cached)`), so the review list no longer asks you to listen for hesitations in recordings aligned from your own `.txt`. If your `.txt` has changed since the recording was aligned, it is aligned again. Tested by `tests/test_align_cache.py`.
+
 - **Low or creaky endings (tune choice vs measures):** when the final syllable has fewer than 3 voiced frames or F0 on less than half of its vowel, that syllable alone is tracked again with a 50 Hz floor; the new F0 is accepted only if it continues the pitch line before it (no jump of 7 ST or more), `LOW_FLOOR_RESCUE = yes`, and the token is included and flagged. Otherwise `CREAKY_FINAL = yes` and the token becomes **Include – tune only**: used for tune choice, not for F0 measures (`USE_FOR_TUNE`, `USE_FOR_MEASURES`). The analysis sets count tokens usable for tune; `SENSITIVITY_SET` marks the tokens for the sensitivity analysis; TOKEN_FLOW_BY_SITE counts re-tracked and creaky endings per site. The review list has a check 4 (re-tracked endings), and the Praat review offers **Tune only** in place of "F0 only with a lower floor". Tested by `tests/test_rescue.py`.
 
 - **Token selection:** every run writes SELECTION, TOKEN_FLOW and TOKEN_FLOW_BY_SITE sheets with a keep / exclude / check decision and its reason for every token, following the quality-control rules of the methodology. Manual decisions are read from `manual_overrides.csv`, which is never overwritten; `python -m modules.selection` re-applies the rule after you edit it, without re-measuring. Tested by `tests/test_selection.py`.
