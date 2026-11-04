@@ -895,7 +895,8 @@ def draw_figure(token_id, x, sr, t_f0, f0, rng, tiers: List[Tier], syl: Interval
         rows = [("Final syllable", f"{syl_ipa}  [{syl.start:.3f}–{syl.end:.3f} s]"),
                 ("Duration", f"{cues['FINAL_SYLLABLE_DURATION'] * 1000:.0f} ms"),
                 ("F0 on final vowel", (f"{cov * 100:.0f}%" if cov == cov and cov is not None else "n/a")
-                 + ("  ⚠ check: creak or below floor?" if cues.get("QC_FINAL_VOWEL_LOW_F0") else "")),
+                 + ("  ⚠ check: creak or below floor?" if cues.get("QC_FINAL_VOWEL_LOW_F0") else "")
+                 + (f"  (re-tracked, {RESCUE_FLOOR_HZ:.0f} Hz floor)" if cues.get("LOW_FLOOR_RESCUE") else "")),
                 ("F0 onset", f"{cues['F0_ONSET_HZ']:.0f} Hz at {cues['F0_ONSET_TIME']:.3f} s"),
                 ("F0 peak", f"{cues['F0_PEAK_HZ']:.0f} Hz at {cues['F0_PEAK_TIME']:.3f} s"),
                 ("F0 offset", f"{cues['F0_OFFSET_HZ']:.0f} Hz at {cues['F0_OFFSET_TIME']:.3f} s"),
@@ -907,6 +908,8 @@ def draw_figure(token_id, x, sr, t_f0, f0, rng, tiers: List[Tier], syl: Interval
                  + ("   ⚠ check: F0 jump %.0f ST" % cues["MAX_F0_JUMP_ST"] if cues.get("QC_OCTAVE_JUMP") else ""))]
     else:
         rows = [("Final syllable", f"{syl_ipa}  [{syl.start:.3f}–{syl.end:.3f} s]"), ("Status", cues.get("STATUS", ""))]
+        if cues.get("RESCUE_NOTE"):
+            rows.append(("Low-floor re-tracking", cues["RESCUE_NOTE"]))
     y = 0.98
     for k_, v_ in rows:
         axc.text(0.0, y, k_, fontsize=9.5, color=SEC, va="top", transform=axc.transAxes)
@@ -922,6 +925,58 @@ def draw_figure(token_id, x, sr, t_f0, f0, rng, tiers: List[Tier], syl: Interval
 # ---------------------------------------------------------------------------
 # One token
 # ---------------------------------------------------------------------------
+RESCUE_FLOOR_HZ = 50.0        # pitch floor used to re-track the final syllable only
+RESCUE_MAX_JUMP_ST = 7.0      # the re-tracked F0 must continue the pitch line before it (no jump this large)
+RESCUE_CONTEXT_S = 0.30       # how far before the final syllable the continuity check looks
+RESCUE_MIN_COVERAGE = 0.5     # same threshold as QC_FINAL_VOWEL_LOW_F0
+
+
+def _needs_rescue(cues: Dict) -> bool:
+    cov = cues.get("FINAL_VOWEL_F0_COVERAGE")
+    return cues.get("STATUS") == "no_voiced_f0_in_final_syllable" or (cov == cov and cov is not None and
+                                                                        cov < RESCUE_MIN_COVERAGE)
+
+
+def rescue_final_syllable(x, sr, syl: Interval, t_f0, f0, ceiling: float, floor: float):
+    """Low-floor rescue of the final syllable (low or creaky endings).
+
+    The speaker range (De Looze & Hirst 2008) can put the floor above a low final F0, which is
+    then lost. Only the final syllable is tracked again, with the floor at RESCUE_FLOOR_HZ and the
+    same ceiling; the new frames fill the frames that had no F0. They are accepted only when they
+    continue the pitch line before them: no jump of RESCUE_MAX_JUMP_ST or more between consecutive
+    voiced frames, from RESCUE_CONTEXT_S before the syllable to its end, and at least one voiced
+    frame before the first new one to check against. Returns (new f0 or None, reason)."""
+    if floor <= RESCUE_FLOOR_HZ + 1e-6:
+        return None, "the speaker floor is already at the rescue floor"
+    step = float(t_f0[1] - t_f0[0]) if len(t_f0) > 1 else 0.01
+    pad = 3.0 / RESCUE_FLOOR_HZ                         # one analysis window on each side
+    a, b = max(0.0, syl.start - pad), min(len(x) / sr, syl.end + pad)
+    seg = x[int(a * sr): int(b * sr)]
+    if len(seg) < int(2 * pad * sr):
+        return None, "final syllable too short to re-track"
+    tt, ff = track_pitch(seg, sr, RESCUE_FLOOR_HZ, ceiling, step)
+    tt = tt + a
+    new = f0.copy()
+    in_syl = (t_f0 >= syl.start) & (t_f0 <= syl.end)
+    added = 0
+    for i in np.where(in_syl & np.isnan(f0))[0]:
+        j = int(np.argmin(np.abs(tt - t_f0[i])))
+        if abs(tt[j] - t_f0[i]) <= step / 2 + 1e-9 and not np.isnan(ff[j]):
+            new[i] = ff[j]
+            added += 1
+    if added == 0:
+        return None, "no F0 even with the lower floor"
+    win = (t_f0 >= syl.start - RESCUE_CONTEXT_S) & (t_f0 <= syl.end)
+    idx = np.where(win & ~np.isnan(new))[0]
+    first_new = next(i for i in idx if np.isnan(f0[i]))
+    if not any(i < first_new for i in idx):
+        return None, "no F0 before the re-tracked frames to check continuity against"
+    v = 12 * np.log2(new[idx])
+    if len(v) > 1 and np.abs(np.diff(v)).max() >= RESCUE_MAX_JUMP_ST:
+        return None, f"re-tracked F0 jumps by {RESCUE_MAX_JUMP_ST:.0f} ST or more (creak or octave error)"
+    return new, f"{added} frame(s) re-tracked with a {RESCUE_FLOOR_HZ:.0f} Hz floor"
+
+
 def process_token(wav: Path, textgrid: Optional[Path], out_dir: Path, tier="MAS", force_auto=False,
                   slope_threshold=1.5, fixed_range: Optional[Tuple[float, float]] = None,
                   svg=False, pitch=None, measure_domain: str = "final") -> Dict:
@@ -984,8 +1039,27 @@ def process_token(wav: Path, textgrid: Optional[Path], out_dir: Path, tier="MAS"
     row["FINAL_DOMAIN_TIER"] = src_tier
     row["AUTO_SYLLABLE_COUNT"] = len(auto_syl)
 
+    tg_cov = tg_in if src_tier != "SYL-AUTO" else None
     cues = measure_cues(t_f0, f0, t_int, db, syl, ref, slope_threshold)
-    cues.update(final_vowel_coverage(tg_in if src_tier != "SYL-AUTO" else None, syl, t_f0, f0))
+    cues.update(final_vowel_coverage(tg_cov, syl, t_f0, f0))
+    rescue = {"LOW_FLOOR_RESCUE": False, "CREAKY_FINAL": False, "RESCUE_NOTE": ""}
+    if _needs_rescue(cues):
+        before = cues.get("FINAL_VOWEL_F0_COVERAGE")
+        f0_new, why = rescue_final_syllable(x, sr, syl, t_f0, f0, rng[1], rng[0])
+        if f0_new is not None:
+            c2 = measure_cues(t_f0, f0_new, t_int, db, syl, ref, slope_threshold)
+            c2.update(final_vowel_coverage(tg_cov, syl, t_f0, f0_new))
+            if not _needs_rescue(c2):
+                cues, f0 = c2, f0_new
+                rescue.update(LOW_FLOOR_RESCUE=True, RESCUE_NOTE=why + (
+                    f"; final-vowel F0 coverage {before:.2f} -> {c2['FINAL_VOWEL_F0_COVERAGE']:.2f}"
+                    if before == before and before is not None and c2.get("FINAL_VOWEL_F0_COVERAGE") == c2.get(
+                        "FINAL_VOWEL_F0_COVERAGE") else ""))
+            else:
+                why = why + ", but still too little F0 in the final syllable"
+        if not rescue["LOW_FLOOR_RESCUE"]:
+            rescue.update(CREAKY_FINAL=True, RESCUE_NOTE="rescue not accepted: " + why)
+    cues.update(rescue)
     row.update(cues)
     row["MEASURE_DOMAIN"] = measure_domain
     if measure_domain == "both":
@@ -1067,6 +1141,8 @@ def write_praat_check(df: pd.DataFrame, out: Path) -> None:
     if "STATUS" not in df.columns:
         return
     d = df[df.STATUS == "completed"]
+    if "LOW_FLOOR_RESCUE" in d.columns:       # re-tracked with a lower floor: Praat with the file range would differ
+        d = d[~d["LOW_FLOOR_RESCUE"].astype(str).str.lower().isin(("true", "1", "yes"))]
     d[[c for c in PRAAT_CHECK_COLS if c in d.columns]].to_csv(out / "final_domain_praat_check.csv", index=False)
 
 
@@ -1083,7 +1159,8 @@ def run_folder(folder: str | Path, out: str | Path, **kw) -> pd.DataFrame:
         except Exception as e:  # keep going; the row records the failure
             rows.append({"AUDIO_FILE": w.name, "STATUS": "failed", "ERROR": str(e)})
     df = pd.DataFrame(rows)
-    first = ["TOKEN_ID", "SPEAKER_ID", "SENTENCE_ID", "STATUS", "CONTOUR_CLASS", "QC_OCTAVE_JUMP", "FINAL_SLOPE_ST",
+    first = ["TOKEN_ID", "SPEAKER_ID", "SENTENCE_ID", "STATUS", "CONTOUR_CLASS", "QC_OCTAVE_JUMP",
+             "LOW_FLOOR_RESCUE", "CREAKY_FINAL", "FINAL_SLOPE_ST",
              "FINAL_SLOPE_ENDPOINT_ST", "F0_CHANGE_ST", "FINAL_SYLLABLE_DURATION", "FINAL_SYLLABLE_START",
              "FINAL_SYLLABLE_END", "F0_ONSET_TIME", "F0_ONSET_HZ", "F0_PEAK_TIME", "F0_PEAK_HZ",
              "F0_VALLEY_TIME", "F0_VALLEY_HZ", "F0_OFFSET_TIME", "F0_OFFSET_HZ", "PEAK_ALIGNMENT_S",

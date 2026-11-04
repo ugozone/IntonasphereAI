@@ -3,11 +3,14 @@
 # the recording with the TextGrid the run used, zoomed to the end of the sentence, with the
 # pitch range set to 50-500 Hz so that low and creaky endings are visible.
 # For each token, choose a decision in the small window and click "Save & next":
-#   Include / Exclude            -> written to manual_overrides.csv (CHECKED = yes)
+#   Include                      -> used for tune choice and for the F0 measures
+#   Tune only                    -> the ending is low or creaky but you can label the nuclear
+#                                   configuration (usually L%): used for tune choice only
+#   Exclude                      -> not used (the ending cannot be labelled, or the sentence is wrong)
+#     (these three are written to manual_overrides.csv with CHECKED = yes)
 #   TextGrid corrected           -> the TextGrid you edited is saved in place (a copy of the
 #                                   original is kept in review_backups/); the next run_all
 #                                   re-measures the token
-#   F0 only with a lower floor   -> noted in manual_overrides.csv; the token stays excluded for now
 #   Not sure                     -> nothing is written; the token is listed again next time
 # Tokens that already have CHECKED = yes in manual_overrides.csv are skipped, so you can stop
 # at any time and continue later. Afterwards, in Terminal:
@@ -94,9 +97,9 @@ for i to n
                 comment: "If the pitch line is not 50-500 Hz: Pitch > Pitch settings..., range 50 to 500."
                 optionMenu: "Decision", 1
                     option: "Include"
+                    option: "Tune only (ending can be labelled; not measured)"
                     option: "Exclude"
                     option: "TextGrid corrected (save it; the next run re-measures)"
-                    option: "F0 only with a lower floor (keep excluded for now)"
                     option: "Not sure: decide later"
                 sentence: "Note", ""
             clicked = endPause: "Stop", "Skip", "Save & next", 3
@@ -109,8 +112,10 @@ for i to n
                 if decision = 1
                     dec$ = "Include"
                 elsif decision = 2
-                    dec$ = "Exclude"
+                    dec$ = "Tune only"
                 elsif decision = 3
+                    dec$ = "Exclude"
+                elsif decision = 4
                     note$ = "TextGrid corrected in review. " + note$
                     base$ = right$ (tg$, length (tg$) - max (rindex (tg$, "/"), rindex (tg$, "\")))
                     backup$ = backup_folder$ + "/" + base$
@@ -121,8 +126,6 @@ for i to n
                     selectObject: textgrid
                     Save as text file: tg$
                     corrected += 1
-                elsif decision = 4
-                    note$ = "F0 visible only with a lower pitch floor. " + note$
                 endif
                 @appendDecision: token$ + ",yes," + dec$ + "," + note$
                 decided += 1

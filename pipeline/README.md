@@ -205,17 +205,20 @@ quality-control rules of the methodology; the thresholds are listed in PARAMETER
 
 | Decision | When |
 |---|---|
-| **Exclude** | (a) no F0 in the final syllable; (c) the final word group (*à Beaulieu*, *grand honneur*, *visites officielles*, *grand émoi*) is missing, repeated, or contains a hesitation or self-repair, because the nuclear configuration is realised on exactly that stretch |
+| **Include – tune only** | (a) the final syllable has no usable F0 (no F0, or F0 on less than half of the final vowel), even after the low-floor re-tracking below: a low or creaky ending. The token is used for **tune choice** (the nuclear configuration can usually be labelled, typically L%) but **not for the F0 measures**. Record `Exclude` if the ending cannot be labelled either |
+| **Exclude** | (c) the final word group (*à Beaulieu*, *grand honneur*, *visites officielles*, *grand émoi*) is missing, repeated, or contains a hesitation or self-repair, because the nuclear configuration is realised on exactly that stretch |
 | **Check by listening** | (b) articulation rate below 2 syllables per second: the file may contain more than the sentence. Listen, then record Include or Exclude |
 | **Include** | everything else. Hesitations earlier in the sentence are noted but do not exclude the token |
-| **Include, FLAGGED = yes** | kept, but marked for the sensitivity analysis: F0 on less than half of the final vowel, an F0 jump of 7 ST or more, a final syllable over 600 ms, or a contour class that disagrees with the proposed boundary tone |
+| **Include, FLAGGED = yes** | kept, but marked for the sensitivity analysis: final-syllable F0 re-tracked with a lower floor (`LOW_FLOOR_RESCUE`), an F0 jump of 7 ST or more, a final syllable over 600 ms, or a contour class that disagrees with the proposed boundary tone |
 | **Repair, then reassess** | no TextGrid, or the final-domain analysis failed |
 | **Pending – no data** | a speaker in the speaker table has no recording of that sentence (Q1–Q3, and S4 unless `--no-plan-s4`) |
 | **Pending – metadata** | the speaker is not in the speaker table |
 
-- **SELECTION sheet** (also `outputs/intonasphere_selection.csv`): the decision and reason for each token, with `COMPLETE_CASE_SET` (all three questions included) and `RQ4_SET` (S4 and at least one question included).
-- **TOKEN_FLOW** and **TOKEN_FLOW_BY_SITE** sheets: how many tokens were kept, flagged, excluded or are pending, by sentence and by site.
-- **Your decisions** go in `outputs/manual_overrides.csv` (columns `TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE`). It is created empty once and never overwritten. `MANUAL_DECISION` can be `Include`, `Exclude`, or e.g. `Not available` for an S4 that does not exist; it replaces the automatic decision.
+**Low or creaky endings.** The speaker's pitch range (floor 0.75 × Q25 of that speaker's F0) can sit above a low final F0, which is then lost. When the final syllable has fewer than 3 voiced frames, or F0 on less than half of its vowel, the pipeline tracks **that syllable only** again with a 50 Hz floor and the same ceiling. The new values are accepted only if they continue the pitch line before them, with no jump of 7 ST or more (from 0.3 s before the syllable to its end); the token is then included and flagged, `LOW_FLOOR_RESCUE = yes`. Otherwise `CREAKY_FINAL = yes` and the token is "Include – tune only". A sudden drop to half the frequency is the typical sign of creak (period doubling), not of a real fall, so it is not measured. Leaving these tokens out altogether would remove mostly falling endings and bias the tune counts towards rises, unevenly across sites; keeping them for tune choice only avoids that.
+
+- **SELECTION sheet** (also `outputs/intonasphere_selection.csv`): the decision and reason for each token, with `USE_FOR_TUNE` (Include and tune only), `USE_FOR_MEASURES` (Include only), `LOW_FLOOR_RESCUE`, `CREAKY_FINAL`, `COMPLETE_CASE_SET` (all three questions usable for tune), `RQ4_SET` (S4 and at least one question usable for tune) and `SENSITIVITY_SET` (Include, not flagged, not re-tracked: run the main analyses again on it).
+- **TOKEN_FLOW** and **TOKEN_FLOW_BY_SITE** sheets: how many tokens were kept, flagged, kept for tune only, excluded or are pending, by sentence and by site, with the re-tracked and creaky final syllables per site.
+- **Your decisions** go in `outputs/manual_overrides.csv` (columns `TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE`). It is created empty once and never overwritten. `MANUAL_DECISION` can be `Include`, `Tune only`, `Exclude`, or e.g. `Not available` for an S4 that does not exist; it replaces the automatic decision.
 - **After editing the overrides file**, update the decisions without measuring anything again:
 
 ```bash
@@ -234,9 +237,9 @@ Some decisions need your ears and eyes. A script opens those tokens in Praat one
    python -m modules.review_list --results outputs/intonasphere_results.xlsx --folder data/wavs
    ```
 
-   It lists three checks: **1** tokens excluded for "no F0 in the final syllable" (look with a lower pitch floor, and check the final-syllable boundary); **2** tokens to check by listening; **3** included tokens whose TextGrid WebMAUS made from the PFC text (listen to the final word group). `--tasks 1,2` lists only some of them. Tokens already marked `CHECKED = yes` are left out.
+   It lists four checks: **1** "tune only" tokens (low or creaky ending: can you label the nuclear configuration? check the final-syllable boundary too); **2** tokens to check by listening; **3** included tokens whose TextGrid WebMAUS made from the PFC text (listen to the final word group); **4** included tokens whose final F0 was re-tracked with a 50 Hz floor (does the new pitch line follow the voice?). `--tasks 1,2` lists only some of them. Tokens already marked `CHECKED = yes` are left out.
 2. In Praat: **Open → Open Praat script…** `praat/review_tokens.praat`, then **Run**. Give it `outputs/review_list.tsv` and `outputs/manual_overrides.csv`.
-3. For each token, choose **Include**, **Exclude**, **TextGrid corrected** (after moving a boundary in the editor; the TextGrid is saved and a copy of the original kept in `outputs/review_backups/`), **F0 only with a lower floor**, or **Not sure**, add a note if you like, and click **Save & next**. **Stop** ends the session; run the script again later to continue where you stopped.
+3. For each token, choose **Include**, **Tune only** (the ending can be labelled but not measured), **Exclude**, **TextGrid corrected** (after moving a boundary in the editor; the TextGrid is saved and a copy of the original kept in `outputs/review_backups/`), or **Not sure**, add a note if you like, and click **Save & next**. **Stop** ends the session; run the script again later to continue where you stopped.
 4. Then update the decisions with `python -m modules.selection --results outputs/intonasphere_results.xlsx`, or run `run_all` again (same `--out`) if you corrected a TextGrid.
 
 ## The separate commands still work

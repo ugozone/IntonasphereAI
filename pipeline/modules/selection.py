@@ -5,8 +5,18 @@ IntonaSphere AI - token selection (quality control)
 Turns the measurements of one run into a keep / exclude decision for every token, with the
 reason, following the quality-control rules of the dissertation methodology (Chapter 3):
 
+Tune choice and F0 measurement are kept apart
+  (a) no F0 can be measured in the final syllable, even after re-tracking that syllable with a
+      lower pitch floor (CREAKY_FINAL: a low or creaky ending, or F0 on less than half of the
+      final vowel): the token is kept for TUNE CHOICE (the annotator can usually label the
+      nuclear configuration, typically L%) but left out of the F0 MEASURES
+      -> "Include – tune only" (USE_FOR_TUNE = yes, USE_FOR_MEASURES = no). Record Exclude in the
+      overrides file when the nuclear configuration cannot be labelled either.
+      Excluding these tokens altogether would remove low, creaky endings - mostly falls - and so
+      bias the tune counts towards rises, unevenly across sites.
+  A final syllable whose F0 was recovered by the low-floor re-tracking (LOW_FLOOR_RESCUE) is
+  included for both, and flagged.
 Exclusion (a token is excluded only for a technical reason, never because of its value)
-  (a) no F0 can be measured in the final syllable, so no terminal movement exists;
   (b) the file contains more than the target sentence: detected when the articulation rate
       falls below MIN_ARTICULATION_RATE syllables per second, and CONFIRMED BY LISTENING
       (the automatic decision is "Check by listening"; record the result in the overrides file);
@@ -14,7 +24,7 @@ Exclusion (a token is excluded only for a technical reason, never because of its
       is repeated or contains a hesitation or self-repair, because the nuclear configuration
       that is analysed is realised on exactly that stretch of speech.
 Flags (the token is kept, and marked FLAGGED = yes for the sensitivity analysis)
-  - F0 on less than half of the final vowel             (QC_FINAL_VOWEL_LOW_F0)
+  - final-syllable F0 re-tracked with a lower floor     (LOW_FLOOR_RESCUE)
   - an F0 jump of 7 semitones or more in the final syllable  (QC_OCTAVE_JUMP)
   - a final syllable longer than LONG_FINAL_SYLLABLE_S
   - disagreement between the contour class and the proposed boundary tone
@@ -65,27 +75,32 @@ SENTENCES = QUESTIONS + (STATEMENT,)
 FILLERS = {"euh", "heu", "hum", "hm", "ben", "bah", "eh"}
 
 INCLUDE, EXCLUDE, CHECK, REPAIR = "Include", "Exclude", "Check by listening", "Repair, then reassess"
+TUNE_ONLY = "Include – tune only"          # tune choice yes, F0 measures no (creaky / no final F0)
 PENDING_DATA, PENDING_META = "Pending – no data", "Pending – metadata"
-DECISION_ORDER = [INCLUDE, CHECK, REPAIR, EXCLUDE, PENDING_DATA, PENDING_META]
+DECISION_ORDER = [INCLUDE, TUNE_ONLY, CHECK, REPAIR, EXCLUDE, PENDING_DATA, PENDING_META]
+USABLE_FOR_TUNE = (INCLUDE, TUNE_ONLY)
 OVERRIDE_COLUMNS = ["TOKEN_ID", "CHECKED", "MANUAL_DECISION", "MANUAL_NOTE"]
 
 SELECTION_COLUMNS = [
     "TOKEN_ID", "SPEAKER_ID", "SITE_ID", "CONTINENT", "AGE", "AGE_GROUP", "SEX", "SENTENCE_ID",
     "SENTENCE_TEXT", "TRANSCRIPT_SOURCE", "SPEECH_RATE_SYLL_PER_SEC", "FINAL_SYLLABLE_DURATION",
-    "FINAL_VOWEL_F0_COVERAGE", "QC_OCTAVE_JUMP", "CONTOUR_VS_BOUNDARY_TONE",
+    "FINAL_VOWEL_F0_COVERAGE", "QC_OCTAVE_JUMP", "LOW_FLOOR_RESCUE", "CREAKY_FINAL", "CONTOUR_VS_BOUNDARY_TONE",
     "EXCLUSION_CHECKS", "FLAGS", "FLAGGED", "NOTES", "AUTO_DECISION", "AUTO_REASON",
-    "CHECKED", "MANUAL_DECISION", "MANUAL_NOTE", "SELECTION_DECISION",
-    "COMPLETE_CASE_SET", "RQ4_SET", "AUDIO_FILE",
+    "CHECKED", "MANUAL_DECISION", "MANUAL_NOTE", "SELECTION_DECISION", "USE_FOR_TUNE", "USE_FOR_MEASURES",
+    "COMPLETE_CASE_SET", "RQ4_SET", "SENSITIVITY_SET", "AUDIO_FILE",
 ]
 SELECTION_PARAMETERS = [
-    ("selection", "exclusion (a)", "no F0 in the final syllable"),
+    ("selection", "(a) tune only", "no F0 in the final syllable, or F0 on less than half of the final vowel, "
+                                   "after low-floor re-tracking (CREAKY_FINAL) -> 'Include – tune only': "
+                                   "used for tune choice, not for F0 measures"),
     ("selection", "exclusion (b)", f"articulation rate < {MIN_ARTICULATION_RATE} syll/s -> 'Check by listening'; "
                                    "confirm Exclude in the overrides file"),
     ("selection", "exclusion (c)", "final word group missing, repeated, or with a hesitation/self-repair: "
                                    + ", ".join(f"{k} '{v}'" for k, v in FINAL_WORD_GROUPS.items())),
-    ("selection", "flags (token kept)", f"final-vowel F0 coverage < {LOW_F0_COVERAGE}; F0 jump >= 7 ST; "
+    ("selection", "flags (token kept)", "final-syllable F0 re-tracked with a lower floor; F0 jump >= 7 ST; "
                                         f"final syllable > {LONG_FINAL_SYLLABLE_S} s; contour class vs boundary tone"),
     ("selection", "hesitation words", ", ".join(sorted(FILLERS))),
+    ("selection", "sensitivity set", "usable for tune, not flagged, not re-tracked, not tune only"),
 ]
 
 
@@ -170,9 +185,7 @@ def decide(r: Dict, have_speakers: bool) -> Tuple[str, str, List[str], List[str]
         return REPAIR, "no alignment (TextGrid): align the recording, then run again", [], [], []
     if status not in ("completed", "no_voiced_f0_in_final_syllable"):
         return REPAIR, f"final-domain analysis did not complete ({status or 'not run'})", [], [], []
-    # (a) no F0 in the final syllable
-    if status == "no_voiced_f0_in_final_syllable":
-        excl.append("(a) no F0 in the final syllable")
+    creaky = is_creaky(r)
     # (c) target sentence not produced / final word group affected (PFC sentences only)
     if sent in SENTENCES:
         ok, why, n = check_final_group(r.get("SENTENCE_TEXT"), sent)
@@ -186,10 +199,9 @@ def decide(r: Dict, have_speakers: bool) -> Tuple[str, str, List[str], List[str]
     rate = _num(r.get("SPEECH_RATE_SYLL_PER_SEC"))
     check_b = rate is not None and rate < MIN_ARTICULATION_RATE
     # flags (token kept)
-    cov = _num(r.get("FINAL_VOWEL_F0_COVERAGE"))
-    if _true(r.get("QC_FINAL_VOWEL_LOW_F0")) or (cov is not None and cov < LOW_F0_COVERAGE):
-        flags.append("F0 on less than half of the final vowel")
-    if _true(r.get("QC_OCTAVE_JUMP")):
+    if _true(r.get("LOW_FLOOR_RESCUE")):
+        flags.append("final-syllable F0 re-tracked with a lower pitch floor")
+    if not creaky and _true(r.get("QC_OCTAVE_JUMP")):
         flags.append("F0 jump of 7 ST or more in the final syllable")
     dur = _num(r.get("FINAL_SYLLABLE_DURATION"))
     if dur is not None and dur > LONG_FINAL_SYLLABLE_S:
@@ -199,9 +211,39 @@ def decide(r: Dict, have_speakers: bool) -> Tuple[str, str, List[str], List[str]
     if check_b:
         return CHECK, (f"(b) articulation rate {rate:.2f} syll/s < {MIN_ARTICULATION_RATE}: the file may contain "
                        "more than the sentence; listen, then record Include or Exclude"), excl, flags, notes
+    if creaky:
+        what = ("no F0 in the final syllable" if status == "no_voiced_f0_in_final_syllable"
+                else "F0 on less than half of the final vowel")
+        return TUNE_ONLY, (f"(a) {what}, even with a lower pitch floor (low or creaky ending): kept for tune "
+                           "choice, left out of the F0 measures; record Exclude if the nuclear configuration "
+                           "cannot be labelled"), excl, flags, notes
     if flags:
         return INCLUDE, "kept, flagged: " + "; ".join(flags), excl, flags, notes
     return INCLUDE, "meets all criteria" + (" (" + notes[0] + ")" if notes else ""), excl, flags, notes
+
+
+def is_creaky(r: Dict) -> bool:
+    """Final syllable without usable F0 after the low-floor re-tracking. Runs made before the
+    re-tracking existed have no CREAKY_FINAL column: there the measured values decide."""
+    if _true(r.get("LOW_FLOOR_RESCUE")):
+        return False
+    if str(r.get("FINAL_DOMAIN_STATUS") or "").strip() == "no_voiced_f0_in_final_syllable":
+        return True
+    if not _blank(r.get("CREAKY_FINAL")):
+        return _true(r.get("CREAKY_FINAL"))
+    cov = _num(r.get("FINAL_VOWEL_F0_COVERAGE"))
+    return _true(r.get("QC_FINAL_VOWEL_LOW_F0")) or (cov is not None and cov < LOW_F0_COVERAGE)
+
+
+def normalise_decision(v: str) -> str:
+    """Manual decisions as typed: 'include', 'tune only', 'Include - tune only' ... -> the official labels."""
+    t = re.sub(r"\s+", " ", str(v or "").strip())
+    low = t.lower().replace("–", "-")
+    if not t:
+        return ""
+    if "tune" in low:
+        return TUNE_ONLY
+    return {"include": INCLUDE, "exclude": EXCLUDE}.get(low, t)
 
 
 def _transcript_source(r: Dict) -> str:
@@ -235,14 +277,20 @@ def select(dataset: pd.DataFrame, all_tokens: Optional[pd.DataFrame] = None,
     if all_tokens is not None and len(all_tokens):
         keep = [c for c in ("AUDIO_FILE", "ALIGNMENT_SOURCE", "TEXT_SOURCE", "FINAL_DOMAIN_STATUS",
                             "FINAL_VOWEL_F0_COVERAGE", "QC_FINAL_VOWEL_LOW_F0", "QC_OCTAVE_JUMP",
-                            "CONTOUR_VS_BOUNDARY_TONE") if c in all_tokens.columns]
+                            "LOW_FLOOR_RESCUE", "CREAKY_FINAL", "RESCUE_NOTE",
+                            "CONTOUR_VS_BOUNDARY_TONE") if c not in ds.columns or c == "AUDIO_FILE" if c in all_tokens.columns]
         ds = ds.merge(all_tokens[keep].drop_duplicates("AUDIO_FILE"), on="AUDIO_FILE", how="left")
     have_sp = speakers is not None and len(speakers) > 0
     rows = []
     for _, r in ds.iterrows():
         r = r.to_dict()
         dec, why, excl, flags, notes = decide(r, have_sp)
-        r.update(AUTO_DECISION=dec, AUTO_REASON=why, EXCLUSION_CHECKS="; ".join(excl),
+        measured = not _blank(r.get("FINAL_DOMAIN_STATUS"))
+        if not _blank(r.get("RESCUE_NOTE")) and _true(r.get("LOW_FLOOR_RESCUE")):
+            notes.append(str(r["RESCUE_NOTE"]))
+        r.update(LOW_FLOOR_RESCUE=("yes" if _true(r.get("LOW_FLOOR_RESCUE")) else "no") if measured else "",
+                 CREAKY_FINAL=("yes" if is_creaky(r) else "no") if measured else "",
+                 AUTO_DECISION=dec, AUTO_REASON=why, EXCLUSION_CHECKS="; ".join(excl),
                  FLAGS="; ".join(flags), FLAGGED="yes" if flags else "no", NOTES="; ".join(notes),
                  TRANSCRIPT_SOURCE=_transcript_source(r))
         rows.append(r)
@@ -266,13 +314,20 @@ def select(dataset: pd.DataFrame, all_tokens: Optional[pd.DataFrame] = None,
     # manual decisions
     ov = overrides if overrides is not None else read_overrides(None)
     sel["CHECKED"] = sel["TOKEN_ID"].map(ov["CHECKED"]).fillna("").replace("", "no")
-    sel["MANUAL_DECISION"] = sel["TOKEN_ID"].map(ov["MANUAL_DECISION"]).fillna("")
+    sel["MANUAL_DECISION"] = sel["TOKEN_ID"].map(ov["MANUAL_DECISION"]).fillna("").map(normalise_decision)
     sel["MANUAL_NOTE"] = sel["TOKEN_ID"].map(ov["MANUAL_NOTE"]).fillna("")
     sel["SELECTION_DECISION"] = np.where(sel["MANUAL_DECISION"].str.strip() != "",
                                          sel["MANUAL_DECISION"].str.strip(), sel["AUTO_DECISION"])
-    # analysis sets
+    # a creaky ending is never measured, even when "Include" was chosen after listening (check (b))
+    creaky = sel["CREAKY_FINAL"].eq("yes")
+    sel.loc[creaky & sel["SELECTION_DECISION"].eq(INCLUDE), "SELECTION_DECISION"] = TUNE_ONLY
+    sel["USE_FOR_TUNE"] = np.where(sel["SELECTION_DECISION"].isin(USABLE_FOR_TUNE), "yes", "no")
+    sel["USE_FOR_MEASURES"] = np.where(sel["SELECTION_DECISION"].eq(INCLUDE), "yes", "no")
+    sel["SENSITIVITY_SET"] = np.where(sel["SELECTION_DECISION"].eq(INCLUDE) & sel["FLAGGED"].ne("yes")
+                                      & sel["LOW_FLOOR_RESCUE"].ne("yes"), "yes", "no")
+    # analysis sets (by tune choice: a token that can be labelled counts)
     code = sel["SPEAKER_ID"].astype(str).str.lower().str.replace(r"tw$", "", regex=True)
-    inc = sel["SELECTION_DECISION"].eq(INCLUDE)
+    inc = sel["USE_FOR_TUNE"].eq("yes")
     n_q = sel[inc & sel["SENTENCE_ID"].isin(QUESTIONS)].groupby(code[inc]).size()
     has_s4 = set(code[inc & sel["SENTENCE_ID"].eq(STATEMENT)])
     sel["COMPLETE_CASE_SET"] = code.map(lambda c: "yes" if n_q.get(c, 0) == len(QUESTIONS) else "no")
@@ -295,28 +350,36 @@ def token_flow(sel: pd.DataFrame) -> pd.DataFrame:
         if (dec == d).any() or d in (INCLUDE, EXCLUDE):
             rows.append(row(d, dec == d))
     rows.append(row("  of which included and flagged", dec.eq(INCLUDE) & sel["FLAGGED"].eq("yes")))
+    rows.append(row("  of which final F0 re-tracked with a lower floor", dec.eq(INCLUDE) & sel["LOW_FLOOR_RESCUE"].eq("yes")))
+    rows.append(row("Used for tune choice (Include + tune only)", sel["USE_FOR_TUNE"].eq("yes")))
+    rows.append(row("Used for F0 measures (Include)", sel["USE_FOR_MEASURES"].eq("yes")))
+    rows.append(row("Sensitivity set (Include, not flagged, not re-tracked)", sel["SENSITIVITY_SET"].eq("yes")))
     out = pd.DataFrame(rows, columns=["STEP", "ALL"] + sents)
-    inc = dec.eq(INCLUDE)
+    inc = sel["USE_FOR_TUNE"].eq("yes")
     extra = pd.DataFrame([
         ["Speakers with at least one included token", sel.loc[inc, "SPEAKER_ID"].nunique()],
-        ["Speakers in the complete-case set (Q1-Q3 all included)",
+        ["Speakers in the complete-case set (Q1-Q3 all usable for tune)",
          sel.loc[sel["COMPLETE_CASE_SET"].eq("yes"), "SPEAKER_ID"].nunique()],
-        ["Speakers in the RQ4 set (S4 and at least one question included)",
+        ["Speakers in the RQ4 set (S4 and at least one question usable for tune)",
          sel.loc[sel["RQ4_SET"].eq("yes"), "SPEAKER_ID"].nunique()]], columns=["STEP", "ALL"])
     return pd.concat([out, extra], ignore_index=True).astype({c: "Int64" for c in ["ALL"] + sents})
 
 
 def token_flow_by_site(sel: pd.DataFrame) -> pd.DataFrame:
-    """Included, flagged, excluded and pending tokens by site and sentence."""
+    """Included, flagged, tune-only, excluded and pending tokens by site and sentence, with the
+    number of re-tracked and creaky final syllables (report these by site)."""
     s = sel.copy()
     s["SITE_ID"] = s["SITE_ID"].fillna("(not in speaker table)")
     s["DECISION"] = np.where(s["SELECTION_DECISION"].eq(INCLUDE) & s["FLAGGED"].eq("yes"),
                              "Include (flagged)", s["SELECTION_DECISION"])
     t = pd.crosstab([s["SITE_ID"], s["SENTENCE_ID"]], s["DECISION"])
-    cols = [c for c in [INCLUDE, "Include (flagged)", CHECK, REPAIR, EXCLUDE, PENDING_DATA, PENDING_META]
+    cols = [c for c in [INCLUDE, "Include (flagged)", TUNE_ONLY, CHECK, REPAIR, EXCLUDE, PENDING_DATA, PENDING_META]
             if c in t.columns] + [c for c in t.columns if c not in DECISION_ORDER + ["Include (flagged)"]]
     t = t[cols]
     t["TOTAL"] = t.sum(axis=1)
+    key = [s["SITE_ID"], s["SENTENCE_ID"]]
+    t["RE-TRACKED (LOW FLOOR)"] = s["LOW_FLOOR_RESCUE"].eq("yes").groupby(key).sum().reindex(t.index).fillna(0).astype(int)
+    t["CREAKY FINAL"] = s["CREAKY_FINAL"].eq("yes").groupby(key).sum().reindex(t.index).fillna(0).astype(int)
     return t.reset_index()
 
 

@@ -52,7 +52,8 @@ from typing import Dict, List, Optional, Tuple
 
 import pandas as pd
 
-from .final_domain_visualizer import (HAVE_PARSELMOUTH, load_wav, adaptive_pitch, process_token,
+from .final_domain_visualizer import (RESCUE_FLOOR_HZ, RESCUE_MAX_JUMP_ST, RESCUE_CONTEXT_S, RESCUE_MIN_COVERAGE,
+                                      HAVE_PARSELMOUTH, load_wav, adaptive_pitch, process_token,
                                       write_praat_check)
 from .ftobi_annotator import FToBIConfig, annotate, write_tables
 from .auto_align import ensure_alignments
@@ -78,7 +79,11 @@ README_ROWS = [
     ("SELECTION", "Keep / exclude decision and its reason for every token (and every planned speaker x sentence "
                   "without a recording). SELECTION_DECISION = your MANUAL_DECISION if you gave one, else AUTO_DECISION."),
     ("TOKEN_FLOW", "Tokens per decision, by sentence; speakers in the complete-case set (Q1-Q3) and the RQ4 set (S4)."),
-    ("TOKEN_FLOW_BY_SITE", "Included, flagged, excluded and pending tokens by site and sentence."),
+    ("TOKEN_FLOW_BY_SITE", "Included, flagged, tune-only, excluded and pending tokens by site and sentence, with the "
+                           "re-tracked (low floor) and creaky final syllables."),
+    ("Tune vs measures", "USE_FOR_TUNE = yes for Include and 'Include – tune only' (creaky or low ending that can be "
+                         "labelled); USE_FOR_MEASURES = yes for Include only. SENSITIVITY_SET = Include, not flagged, "
+                         "not re-tracked: run the main analyses again on it."),
     ("Manual decisions", "Edit manual_overrides.csv (TOKEN_ID, CHECKED, MANUAL_DECISION, MANUAL_NOTE), then "
                          "python -m modules.selection --results <this workbook> to update the decisions without re-measuring."),
     ("Verification", "Open ftobi/*_ftobi.TextGrid with praat/check_ftobi.praat; then python -m modules.validate_ftobi."),
@@ -248,7 +253,7 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
         all_df["CONTOUR_VS_BOUNDARY_TONE"] = all_df.apply(agree, axis=1)
     first = ["TOKEN_ID", "SPEAKER_ID", "SENTENCE_ID", "AUDIO_FILE", "ALIGNMENT_SOURCE", "TEXT_SOURCE",
              "FINAL_DOMAIN_STATUS", "CONTOUR_CLASS", "FINAL_SLOPE_ST", "F0_CHANGE_ST", "FINAL_SYLLABLE_DURATION",
-             "QC_OCTAVE_JUMP", "FINAL_VOWEL_F0_COVERAGE", "QC_FINAL_VOWEL_LOW_F0", "FTOBI_STATUS", "NUCLEAR", "CONTOUR_VS_BOUNDARY_TONE", "AP_PHRASING", "BREAKS", "TONES", "N_UNCERTAIN",
+             "QC_OCTAVE_JUMP", "FINAL_VOWEL_F0_COVERAGE", "QC_FINAL_VOWEL_LOW_F0", "LOW_FLOOR_RESCUE", "CREAKY_FINAL", "RESCUE_NOTE", "FTOBI_STATUS", "NUCLEAR", "CONTOUR_VS_BOUNDARY_TONE", "AP_PHRASING", "BREAKS", "TONES", "N_UNCERTAIN",
              "NUC_EDGE_TONE", "NUC_EDGE_PREDICTED", "NUC_EDGE_TEST", "QC_WARNINGS",
              "FINAL_DOMAIN_FIGURE", "FTOBI_FIGURE"]
     all_df = all_df[[c for c in first if c in all_df.columns] + [c for c in all_df.columns if c not in first]]
@@ -262,6 +267,11 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
               {"STEP": "pitch", "PARAMETER": "first pass", "VALUE": "by sex: men 60-300 Hz, women 100-500 Hz, "
                "unknown 60-600 Hz" if first_pass_by_sex and speakers is not None else "60-600 Hz for everyone"},
               {"STEP": "final domain", "PARAMETER": "syllable tier", "VALUE": tier},
+              {"STEP": "final domain", "PARAMETER": "low-floor rescue", "VALUE":
+               f"when the final syllable has < 3 voiced frames or F0 on < {RESCUE_MIN_COVERAGE:.0%} of its vowel: "
+               f"re-track that syllable only with a {RESCUE_FLOOR_HZ:.0f} Hz floor and the speaker ceiling; "
+               f"accepted only if no jump >= {RESCUE_MAX_JUMP_ST:.0f} ST from {RESCUE_CONTEXT_S:.1f} s before the "
+               f"syllable (LOW_FLOOR_RESCUE); otherwise CREAKY_FINAL"},
               {"STEP": "final domain", "PARAMETER": "slope threshold (ST/s)", "VALUE": slope_threshold},
               {"STEP": "final domain", "PARAMETER": "measure domain", "VALUE":
                "final syllable + whole phrase (PHRASE_* columns)" if measure_domain == "both" else "final syllable only"}]
@@ -313,8 +323,9 @@ def run(folder: Path, out: Path, align: str = "any", final_domain: bool = True, 
     n = len(all_df)
     ok_fd = int((all_df.get("FINAL_DOMAIN_STATUS") == "completed").sum()) if "FINAL_DOMAIN_STATUS" in all_df else 0
     ok_ft = int((all_df.get("FTOBI_STATUS") == "completed").sum()) if "FTOBI_STATUS" in all_df else 0
-    n_inc = int(sel["SELECTION_DECISION"].eq(selection_rule.INCLUDE).sum())
-    print(tr('\nDone in {value:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  F_ToBI graphs: {ok_ft}  |  tokens included: {n_inc} (see SELECTION / TOKEN_FLOW)\n  -> {value2}', value=time.time() - t0, n=n, ok_fd=ok_fd, ok_ft=ok_ft, n_inc=n_inc, value2=out / 'intonasphere_results.xlsx'))
+    n_inc = int(sel["SELECTION_DECISION"].isin(selection_rule.USABLE_FOR_TUNE).sum())
+    n_tune = int(sel["SELECTION_DECISION"].eq(selection_rule.TUNE_ONLY).sum())
+    print(tr('\nDone in {value:.0f} s: {n} recordings  |  final-domain graphs: {ok_fd}  |  F_ToBI graphs: {ok_ft}  |  tokens included: {n_inc}, of which tune only: {n_tune} (see SELECTION / TOKEN_FLOW)\n  -> {value2}', value=time.time() - t0, n=n, ok_fd=ok_fd, ok_ft=ok_ft, n_inc=n_inc, n_tune=n_tune, value2=out / 'intonasphere_results.xlsx'))
     return all_df
 
 

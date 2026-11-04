@@ -33,6 +33,7 @@ jobs:
         run: |
           python tests/test_selection.py
           python tests/test_review_list.py
+          python tests/test_rescue.py
       - name: Translations complete (pipeline and app)
         run: |
           python tools/check_translations.py

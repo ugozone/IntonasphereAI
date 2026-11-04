@@ -10,13 +10,16 @@ decision to manual_overrides.csv and saves a corrected TextGrid (after a backup 
     python -m modules.review_list --results outputs/intonasphere_results.xlsx --folder data/wavs
 
 Tasks (all by default; choose with --tasks 1,2):
-  1  tokens excluded because no F0 was found in the final syllable: look with a lower pitch floor
-     and check the final-syllable boundary (a wrong boundary is a measurement error, not a reason
-     to exclude)
+  1  "Include – tune only" tokens: the final syllable has no usable F0 even after re-tracking it
+     with a 50 Hz floor (low or creaky ending). Listen: if the nuclear configuration can be
+     labelled (usually L%), keep it for tune choice; Exclude only if it cannot. Check the
+     final-syllable boundary too (a wrong boundary is a measurement error, not creak)
   2  tokens to check by listening: the file may contain more than the sentence
   3  included tokens whose TextGrid was made by WebMAUS from the PFC text (not from a .txt of what
      the reader said), so a hesitation in the final word group would not be in the transcript:
      listen to the final word group
+  4  included tokens whose final-syllable F0 was re-tracked with a 50 Hz floor: check that the new
+     pitch line follows the voice (if it follows creak or noise, choose Tune only)
 Tokens that already have a line with CHECKED = yes in the overrides file are left out
 (use --all to list them again).
 """
@@ -49,15 +52,18 @@ def _num(v):
 
 def instructions(task: int) -> str:
     return {
-        1: tr("No F0 was found in the final syllable. Look at the pitch line with the 50-500 Hz range. "
-              "Choose Exclude if there is still no F0 (or only creak); choose 'TextGrid corrected' if the "
-              "final-syllable boundary was wrong and you moved it; choose 'F0 only with a lower floor' if a "
-              "pitch line appears only now."),
+        1: tr("The final syllable has no usable F0, even with a 50 Hz pitch floor: a low or creaky ending. "
+              "Listen to the end of the sentence. Choose 'Tune only' if you can label the nuclear "
+              "configuration (usually a fall to L%); choose Exclude only if you cannot; choose 'TextGrid "
+              "corrected' if the final-syllable boundary was wrong and you moved it."),
         2: tr("The articulation rate is below 2 syllables per second: the file may contain more than the "
               "sentence. Play the whole file. Include if it holds only its sentence, otherwise Exclude."),
         3: tr("This TextGrid was made by WebMAUS from the PFC text, so a hesitation would not be in the "
               "transcript. Listen to the final word group. Exclude only if it is repeated or contains a "
               "hesitation or self-repair; otherwise Include."),
+        4: tr("The F0 of the final syllable was re-tracked with a 50 Hz floor. Look at the pitch line on "
+              "the final syllable with the 50-500 Hz range. Include if it follows the voice; choose "
+              "'Tune only' if it follows creak or noise."),
     }[task]
 
 
@@ -76,11 +82,15 @@ def build(results: Path, folder: Path, tasks: List[int], overrides: Path, includ
 
     reason = sel["AUTO_REASON"].fillna("")
     task_of = pd.Series(0, index=sel.index)
-    task_of[sel["AUTO_DECISION"].eq(sel_rule.EXCLUDE) & reason.str.startswith("(a)")] = 1
+    task_of[sel["AUTO_DECISION"].eq(sel_rule.TUNE_ONLY)
+            | (sel["AUTO_DECISION"].eq(sel_rule.EXCLUDE) & reason.str.startswith("(a)"))] = 1   # (older runs: Exclude)
     task_of[sel["AUTO_DECISION"].eq(sel_rule.CHECK)] = 2
     task_of[(task_of == 0) & sel["AUTO_DECISION"].eq(sel_rule.INCLUDE)
             & sel["TRANSCRIPT_SOURCE"].fillna("").str.startswith("WebMAUS")
             & sel["TRANSCRIPT_SOURCE"].fillna("").str.contains("hesitation")] = 3   # not when aligned from your own .txt
+    if "LOW_FLOOR_RESCUE" in sel:
+        task_of[(task_of == 0) & sel["AUTO_DECISION"].eq(sel_rule.INCLUDE)
+                & sel["LOW_FLOOR_RESCUE"].astype(str).str.lower().eq("yes")] = 4
     rows = []
     for i, r in sel[task_of.isin(tasks)].iterrows():
         if r["TOKEN_ID"] in checked and not include_checked:
@@ -114,7 +124,7 @@ def main():
     ap.add_argument("--results", required=True, help=tr("intonasphere_results.xlsx of a run"))
     ap.add_argument("--folder", default=None,
                     help=tr("folder with the recordings (the --folder of run_all; default: as recorded in PARAMETERS)"))
-    ap.add_argument("--tasks", default="1,2,3", help=tr("which checks to list, e.g. 1,2 (default: 1,2,3)"))
+    ap.add_argument("--tasks", default="1,2,3,4", help=tr("which checks to list, e.g. 1,2 (default: 1,2,3,4)"))
     ap.add_argument("--overrides", default=None,
                     help=tr("CSV of manual decisions (default: manual_overrides.csv next to the results)"))
     ap.add_argument("--all", action="store_true", help=tr("also list tokens already marked CHECKED = yes"))

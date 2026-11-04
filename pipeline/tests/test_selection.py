@@ -10,7 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import pandas as pd
 
 from modules.selection import (select, token_flow, token_flow_by_site, check_final_group, INCLUDE, EXCLUDE,
-                               CHECK, REPAIR, PENDING_DATA, PENDING_META, SELECTION_COLUMNS)
+                               CHECK, REPAIR, PENDING_DATA, PENDING_META, TUNE_ONLY, SELECTION_COLUMNS,
+                               normalise_decision)
 
 Q = {"Q1": "Le Premier ministre ira-t-il à Beaulieu",
      "Q2": "Qu'est-ce qui a donc valu à Beaulieu ce grand honneur",
@@ -31,7 +32,9 @@ def tokens_extra(code, s, **kw):
     return dict(AUDIO_FILE=f"{code}tw{s[-1]}.wav", ALIGNMENT_SOURCE="user_textgrid",
                 FINAL_DOMAIN_STATUS=kw.pop("status", "completed"),
                 FINAL_VOWEL_F0_COVERAGE=kw.pop("cov", 0.9), QC_FINAL_VOWEL_LOW_F0=kw.pop("low", False),
-                QC_OCTAVE_JUMP=kw.pop("jump", False), CONTOUR_VS_BOUNDARY_TONE=kw.pop("cvb", "agree"))
+                QC_OCTAVE_JUMP=kw.pop("jump", False), CONTOUR_VS_BOUNDARY_TONE=kw.pop("cvb", "agree"),
+                LOW_FLOOR_RESCUE=kw.pop("rescue", False), CREAKY_FINAL=kw.pop("creaky", False),
+                RESCUE_NOTE=kw.pop("note", ""))
 
 
 def main():
@@ -45,10 +48,13 @@ def main():
     ds, at = [], []
     cases = {  # code: (sentence, dataset changes, ALL_TOKENS changes, expected decision, flagged)
         "a01": ("Q1", {}, {}, INCLUDE, "no"),
-        "a02": ("Q2", {}, {"status": "no_voiced_f0_in_final_syllable"}, EXCLUDE, "no"),        # (a)
+        "a02": ("Q2", {}, {"status": "no_voiced_f0_in_final_syllable", "creaky": True}, TUNE_ONLY, "no"),  # (a)
         "a03": ("Q3", {"SPEECH_RATE_SYLL_PER_SEC": 1.4}, {}, CHECK, "no"),                     # (b)
         "a04": ("Q2", {"SENTENCE_TEXT": "Qu'est-ce qui a donc valu à Beaulieu ce grand euh grand honneur"}, {}, EXCLUDE, "no"),  # (c)
-        "a05": ("Q1", {}, {"low": True, "cov": 0.3}, INCLUDE, "yes"),                          # flag
+        "a05": ("Q1", {}, {"low": True, "cov": 0.3, "creaky": True}, TUNE_ONLY, "no"),          # (a) low coverage
+        "a12": ("Q2", {}, {"rescue": True, "cov": 0.8, "note": "6 frame(s) re-tracked"}, INCLUDE, "yes"),  # rescued: flag
+        "a13": ("Q3", {}, {"low": True, "cov": 0.3, "creaky": None}, TUNE_ONLY, "no"),         # older run: no column
+        "a14": ("Q1", {"SPEECH_RATE_SYLL_PER_SEC": 1.5}, {"creaky": True, "cov": 0.2}, CHECK, "no"),  # (b) first
         "a06": ("Q1", {}, {"jump": True}, INCLUDE, "yes"),
         "a07": ("Q3", {"FINAL_SYLLABLE_DURATION": 0.71}, {}, INCLUDE, "yes"),
         "a08": ("Q2", {}, {"cvb": "rise vs L%: check"}, INCLUDE, "yes"),
@@ -63,11 +69,13 @@ def main():
     for s in ("Q2", "Q3"):
         ds.append(tok("a10", s)); at.append(tokens_extra("a10", s))
     ds.append(tok("a10", "Q1")); at.append(tokens_extra("a10", "Q1"))
-    speakers = pd.DataFrame({"SITE_ID": ["Bamako"] * 11, "CONTINENT": ["Africa"] * 11, "AGE": [50] * 11,
-                             "AGE_GROUP": ["Older"] * 11, "SEX": ["F"] * 11},
-                            index=pd.Index([f"a{i:02d}" for i in range(1, 11)] + ["zz9"], name="CODE"))
-    overrides = pd.DataFrame({"TOKEN_ID": ["a03tw_Q3"], "CHECKED": ["yes"], "MANUAL_DECISION": ["Exclude"],
-                              "MANUAL_NOTE": ["listened: file contains the next sentence"]}).set_index("TOKEN_ID")
+    codes = [f"a{i:02d}" for i in range(1, 15) if i != 11] + ["zz9"]
+    speakers = pd.DataFrame({"SITE_ID": ["Bamako"] * len(codes), "CONTINENT": ["Africa"] * len(codes),
+                             "AGE": [50] * len(codes), "AGE_GROUP": ["Older"] * len(codes), "SEX": ["F"] * len(codes)},
+                            index=pd.Index(codes, name="CODE"))
+    overrides = pd.DataFrame({"TOKEN_ID": ["a03tw_Q3", "a14tw_Q1", "a08tw_Q2"], "CHECKED": ["yes"] * 3,
+                              "MANUAL_DECISION": ["Exclude", "include", "tune only"],
+                              "MANUAL_NOTE": ["listened: file contains the next sentence", "", ""]}).set_index("TOKEN_ID")
     sel = select(pd.DataFrame(ds), pd.DataFrame(at), speakers, overrides)
     assert list(sel.columns) == SELECTION_COLUMNS
     by = sel.set_index("TOKEN_ID")
@@ -76,15 +84,27 @@ def main():
         assert r["AUTO_DECISION"] == want, (code, r["AUTO_DECISION"], r["AUTO_REASON"])
         assert r["FLAGGED"] == flagged, (code, r["FLAGS"])
     assert by.loc["a03tw_Q3", "SELECTION_DECISION"] == EXCLUDE, "a manual decision overrides the automatic one"
+    # tune choice vs measures
+    assert tuple(by.loc["a02tw_Q2", ["USE_FOR_TUNE", "USE_FOR_MEASURES"]]) == ("yes", "no")
+    assert tuple(by.loc["a12tw_Q2", ["USE_FOR_TUNE", "USE_FOR_MEASURES", "LOW_FLOOR_RESCUE"]]) == ("yes", "yes", "yes")
+    assert by.loc["a12tw_Q2", "SENSITIVITY_SET"] == "no" and by.loc["a01tw_Q1", "SENSITIVITY_SET"] == "yes"
+    assert "re-tracked" in by.loc["a12tw_Q2", "NOTES"]
+    assert by.loc["a14tw_Q1", "SELECTION_DECISION"] == TUNE_ONLY, "Include after listening: a creaky ending is still not measured"
+    assert by.loc["a08tw_Q2", "SELECTION_DECISION"] == TUNE_ONLY, "'tune only' typed by hand is understood"
+    assert by.loc["a13tw_Q3", "CREAKY_FINAL"] == "yes"
+    assert normalise_decision("Include - tune only") == TUNE_ONLY and normalise_decision(" exclude ") == EXCLUDE
     assert by.loc["zz9tw_S4", "AUTO_DECISION"] == PENDING_DATA, "planned S4 row for a speaker without recordings"
     assert by.loc["a10tw_S4", "COMPLETE_CASE_SET"] == "yes" and by.loc["a10tw_S4", "RQ4_SET"] == "yes"
     assert by.loc["a01tw_Q1", "COMPLETE_CASE_SET"] == "no" and by.loc["a01tw_Q1", "RQ4_SET"] == "no"
     flow = token_flow(sel).set_index("STEP")
     assert flow.loc[INCLUDE, "ALL"] == int((sel["SELECTION_DECISION"] == INCLUDE).sum())
-    assert flow.loc["Speakers in the RQ4 set (S4 and at least one question included)", "ALL"] == 1
+    assert flow.loc["Speakers in the RQ4 set (S4 and at least one question usable for tune)", "ALL"] == 1
+    assert flow.loc["Used for tune choice (Include + tune only)", "ALL"] == int(sel["USE_FOR_TUNE"].eq("yes").sum())
+    assert flow.loc[TUNE_ONLY, "ALL"] == 5
     site = token_flow_by_site(sel)
     assert site["TOTAL"].sum() == len(sel)
-    print(f"token selection: all {len(cases) + 6} checks passed")
+    assert site["RE-TRACKED (LOW FLOOR)"].sum() == 1 and site["CREAKY FINAL"].sum() == 4
+    print(f"token selection: all {len(cases) + 17} checks passed")
 
 
 if __name__ == "__main__":
