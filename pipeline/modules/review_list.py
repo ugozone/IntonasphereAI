@@ -14,8 +14,9 @@ Tasks (all by default; choose with --tasks 1,2):
      and check the final-syllable boundary (a wrong boundary is a measurement error, not a reason
      to exclude)
   2  tokens to check by listening: the file may contain more than the sentence
-  3  included tokens whose TextGrid was made by WebMAUS from the PFC text, so a hesitation in the
-     final word group would not be in the transcript: listen to the final word group
+  3  included tokens whose TextGrid was made by WebMAUS from the PFC text (not from a .txt of what
+     the reader said), so a hesitation in the final word group would not be in the transcript:
+     listen to the final word group
 Tokens that already have a line with CHECKED = yes in the overrides file are left out
 (use --all to list them again).
 """
@@ -78,7 +79,8 @@ def build(results: Path, folder: Path, tasks: List[int], overrides: Path, includ
     task_of[sel["AUTO_DECISION"].eq(sel_rule.EXCLUDE) & reason.str.startswith("(a)")] = 1
     task_of[sel["AUTO_DECISION"].eq(sel_rule.CHECK)] = 2
     task_of[(task_of == 0) & sel["AUTO_DECISION"].eq(sel_rule.INCLUDE)
-            & sel["TRANSCRIPT_SOURCE"].fillna("").str.startswith("WebMAUS")] = 3
+            & sel["TRANSCRIPT_SOURCE"].fillna("").str.startswith("WebMAUS")
+            & sel["TRANSCRIPT_SOURCE"].fillna("").str.contains("hesitation")] = 3   # not when aligned from your own .txt
     rows = []
     for i, r in sel[task_of.isin(tasks)].iterrows():
         if r["TOKEN_ID"] in checked and not include_checked:

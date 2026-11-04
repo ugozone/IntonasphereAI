@@ -31,6 +31,8 @@ def main():
             dict(TOKEN_ID="a06tw_Q2", SITE_ID="Lacaune", AUDIO_FILE="a06tw2.wav", AUTO_DECISION=INCLUDE,
                  AUTO_REASON="meets all criteria", TRANSCRIPT_SOURCE="WebMAUS (cached alignment; hesitations may not be transcribed)"),
             dict(TOKEN_ID="a07tw_S4", SITE_ID="x", AUTO_DECISION="Pending – no data", AUTO_REASON="no recording"),
+            dict(TOKEN_ID="a08tw_S4", SITE_ID="Bangui", AUDIO_FILE="a08tw4.wav", AUTO_DECISION=INCLUDE,
+                 AUTO_REASON="meets all criteria", TRANSCRIPT_SOURCE="WebMAUS from user_txt"),
         ])
         files = [f"a0{i}tw{q}.wav" for i, q in [(1, 1), (2, 2), (3, 3), (4, 1), (5, 1), (6, 2)]]
         at = pd.DataFrame({"AUDIO_FILE": files, "TEXTGRID_USED": [f"/data/{f[:-4]}.TextGrid" for f in files]})
@@ -46,7 +48,7 @@ def main():
         lst = build(res, Path("/data"), [1, 2, 3], ov, include_checked=False)
         assert list(lst.columns) == REVIEW_COLUMNS
         got = dict(zip(lst["TOKEN_ID"], lst["TASK"]))
-        assert got == {"a01tw_Q1": 1, "a02tw_Q2": 2, "a03tw_Q3": 3}, got      # a06 already checked, a04/a05/a07 not listed
+        assert got == {"a01tw_Q1": 1, "a02tw_Q2": 2, "a03tw_Q3": 3}, got      # a06 checked; a04/a05/a07 and a08 (own .txt) not listed
         r1 = lst.set_index("TOKEN_ID").loc["a01tw_Q1"]
         assert abs(r1["ZOOM_START"] - 0.5) < 1e-9 and abs(r1["ZOOM_END"] - 2.6) < 1e-9
         assert r1["AUDIO_PATH"] == str(Path("/data") / "a01tw1.wav") and r1["TEXTGRID_PATH"] == "/data/a01tw1.TextGrid"
