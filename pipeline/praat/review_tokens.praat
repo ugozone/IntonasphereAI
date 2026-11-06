@@ -11,6 +11,12 @@
 #   TextGrid corrected           -> the TextGrid you edited is saved in place (a copy of the
 #                                   original is kept in review_backups/); the next run_all
 #                                   re-measures the token
+#   Cut the noise at the end     -> for a file that goes on after the sentence (breath, room noise):
+#                                   first drag the end boundary of the last word to where the voice
+#                                   stops; the script then cuts the recording AND the TextGrid
+#                                   0.05 s after that boundary. Copies of the original recording and
+#                                   TextGrid are kept in review_backups/; the next run_all re-measures
+#                                   it, and it comes back in the review list only if it still needs a look
 #   Not sure                     -> nothing is written; the token is listed again next time
 # Tokens that already have CHECKED = yes in manual_overrides.csv are skipped, so you can stop
 # at any time and continue later. Afterwards, in Terminal:
@@ -100,13 +106,24 @@ for i to n
                     option: "Tune only (ending can be labelled; not measured)"
                     option: "Exclude"
                     option: "TextGrid corrected (save it; the next run re-measures)"
+                    option: "Cut the noise after the last word (recording and TextGrid)"
                     option: "Not sure: decide later"
                 sentence: "Note", ""
             clicked = endPause: "Stop", "Skip", "Save & next", 3
 
             if clicked = 1
                 stop = 1
-            elsif clicked = 3 and decision < 5
+            elsif clicked = 3 and decision = 5
+                @cutAfterLastWord
+                if cut_ok
+                    note$ = replace$ (note$, ",", ";", 0)
+                    note$ = "Noise after the sentence cut at " + fixed$ (cut_at, 3) + " s in review. " + note$
+                    # CHECKED = no: after run_all re-measures it, the token is listed again only if it still needs a look
+                    @appendDecision: token$ + ",no,," + note$
+                    decided += 1
+                    corrected += 1
+                endif
+            elsif clicked = 3 and decision < 6
                 note$ = replace$ (note$, ",", ";", 0)
                 dec$ = ""
                 if decision = 1
@@ -136,13 +153,70 @@ for i to n
 endfor
 removeObject: table
 
-appendInfoLine: newline$, "Decisions written: ", decided, "   TextGrids corrected: ", corrected
+appendInfoLine: newline$, "Decisions written: ", decided, "   TextGrids corrected or files cut: ", corrected
 appendInfoLine: "Decisions file: ", overrides_file$
 if corrected > 0
     appendInfoLine: "You corrected TextGrids: run run_all again (same --out folder) to re-measure them."
 else
     appendInfoLine: "Now, in Terminal:  python3 -m modules.selection --results <results folder>/intonasphere_results.xlsx"
 endif
+
+procedure backupOnce: .object, .path$, .kind$
+    .base$ = right$ (.path$, length (.path$) - max (rindex (.path$, "/"), rindex (.path$, "")))
+    .backup$ = backup_folder$ + "/" + .base$
+    if not fileReadable (.backup$)
+        selectObject: .object
+        if .kind$ = "wav"
+            Save as WAV file: .backup$
+        else
+            Save as text file: .backup$
+        endif
+    endif
+endproc
+
+procedure cutAfterLastWord
+    # the word tier: ORT-MAU (WebMAUS) or a tier called words/ORT/mots, else tier 1
+    cut_ok = 0
+    selectObject: textgrid
+    .ntiers = Get number of tiers
+    .tier = 1
+    for .k to .ntiers
+        .name$ = Get tier name: .k
+        .isint = Is interval tier: .k
+        if .isint and (.name$ = "ORT-MAU" or .name$ = "ORT" or .name$ = "words" or .name$ = "mots")
+            .tier = .k
+        endif
+    endfor
+    .n = Get number of intervals: .tier
+    .i = .n
+    .lab$ = Get label of interval: .tier, .i
+    while .i > 1 and (.lab$ = "" or .lab$ = "<p:>" or .lab$ = "_" or .lab$ = "#")
+        .i -= 1
+        .lab$ = Get label of interval: .tier, .i
+    endwhile
+    .wordEnd = Get end time of interval: .tier, .i
+    .total = Get end time
+    cut_at = .wordEnd + 0.05
+    if cut_at > .total - 0.02
+        beginPause: "Nothing to cut"
+            comment: "The last word already ends at the end of the file (" + fixed$ (.wordEnd, 3) + " s)."
+            comment: "First drag the end boundary of the last word to where the voice stops,"
+            comment: "then choose this option again. The token is listed again next time."
+        .clicked = endPause: "OK", 1
+    else
+        @backupOnce: sound, wav$, "wav"
+        @backupOnce: original, tg$, "TextGrid"
+        selectObject: sound
+        .cutSound = Extract part: 0, cut_at, "rectangular", 1, "no"
+        Save as WAV file: wav$
+        selectObject: textgrid
+        .cutGrid = Extract part: 0, cut_at, "no"
+        Save as text file: tg$
+        removeObject: .cutSound, .cutGrid
+        appendInfoLine: token$, ": cut at ", fixed$ (cut_at, 3), " s (was ", fixed$ (.total, 3), " s)"
+        cut_ok = 1
+    endif
+endproc
 
 procedure appendDecision: .line$
     .text$ = readFile$ (overrides_file$)

@@ -18,6 +18,10 @@ One package with everything; it replaces all earlier zips.
 | `python3 install.py [--lang en|fr] [--yes] [--with-asr]` | Installs everything in English or French, remembers the language for every command, runs the self-test. Any command takes `--lang en` or `--lang fr`. |
 | Praat: `praat/verify_final_domain.praat`, `draw_final_domain.praat`, `draw_ftobi.praat`, `check_ftobi.praat` (French: `*_fr.praat`) | Re-measure the values in Praat, draw both graphs in Praat, and correct the F_ToBI proposals. |
 
+## Added on 5 November 2026
+
+- **Praat review: cut the noise after the sentence.** For a recording that goes on after the sentence (breath or room noise), drag the end of the last word to where the voice stops and choose *Cut the noise after the last word*: the recording and its TextGrid are cut 0.05 s after that point (copies of both are kept in `review_backups/`). The token is noted in `manual_overrides.csv` with CHECKED = no, so after run_all re-measures it, it comes back in the review list only if it still needs a look.
+
 ## Added on 3 November 2026
 
 - **Cached alignments:** a TextGrid reused from `aligned/` now records which text it was made from (`user_txt (cached)` or `pfc_texte_lu (cached)`), so the review list no longer asks you to listen for hesitations in recordings aligned from your own `.txt`. If your `.txt` has changed since the recording was aligned, it is aligned again. Tested by `tests/test_align_cache.py`.

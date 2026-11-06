@@ -55,7 +55,9 @@ def instructions(task: int) -> str:
         1: tr("The final syllable has no usable F0, even with a 50 Hz pitch floor: a low or creaky ending. "
               "Listen to the end of the sentence. Choose 'Tune only' if you can label the nuclear "
               "configuration (usually a fall to L%); choose Exclude only if you cannot; choose 'TextGrid "
-              "corrected' if the final-syllable boundary was wrong and you moved it."),
+              "corrected' if the final-syllable boundary was wrong and you moved it. If the file goes on after the "
+              "sentence (breath or room noise, no pulses), drag the end of the last word to where the voice stops and "
+              "choose 'Cut the noise after the last word'."),
         2: tr("The articulation rate is below 2 syllables per second: the file may contain more than the "
               "sentence. Play the whole file. Include if it holds only its sentence, otherwise Exclude."),
         3: tr("This TextGrid was made by WebMAUS from the PFC text, so a hesitation would not be in the "
